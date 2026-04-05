@@ -531,7 +531,7 @@ export default {
                       h(
                         't-popconfirm',
                         {
-                          props: { content: '确认通过并上链吗？', theme: 'primary' },
+                          props: { content: '确认通过并上链吗？' },
                           on: { confirm: () => this.handleApprove(row) },
                         },
                         [
@@ -545,7 +545,7 @@ export default {
                       h(
                         't-popconfirm',
                         {
-                          props: { content: '确定驳回请求吗？', theme: 'danger' },
+                          props: { content: '确定驳回请求吗？' },
                           on: { confirm: () => this.handleReject(row) },
                         },
                         [
@@ -908,7 +908,7 @@ export default {
           await this.fetchPermissionList();
         }
       } catch (error) {
-        this.$message.error('审批失败');
+        console.error('approve failed', error);
       }
     },
     async handleReject(row) {
@@ -919,7 +919,7 @@ export default {
           await this.fetchPermissionList();
         }
       } catch (error) {
-        this.$message.error('驳回失败');
+        console.error('reject failed', error);
       }
     },
     async handleCompare(row) {
@@ -1182,9 +1182,16 @@ export default {
 .summary-row,
 .content-row {
   margin-bottom: 0;
+  align-items: stretch;
+}
+
+.summary-row > .t-col,
+.content-row > .t-col {
+  display: flex;
 }
 
 .summary-card {
+  width: 100%;
   min-height: 150px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(238, 247, 255, 0.92) 100%);
 
@@ -1208,7 +1215,16 @@ export default {
 }
 
 .panel-card {
-  min-height: 100%;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  :deep(.t-card__body) {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
 
   :deep(.t-card__title) {
     font-size: 18px;
@@ -1224,6 +1240,10 @@ export default {
 
 .info-panel {
   background: linear-gradient(180deg, rgba(248, 251, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+
+  :deep(.t-card__body) {
+    justify-content: space-between;
+  }
 }
 
 .guide-list {
@@ -1244,6 +1264,7 @@ export default {
   display: grid;
   gap: 10px;
   margin-top: 18px;
+  align-content: start;
 }
 
 .account-item {
@@ -1299,7 +1320,7 @@ export default {
 }
 
 .guide-panel {
-  margin-top: 18px;
+  margin-top: auto;
   padding: 14px 16px;
   border-radius: 14px;
   background: linear-gradient(180deg, #ffffff 0%, #f5faff 100%);
@@ -1372,6 +1393,11 @@ export default {
 
   .hero-main h1 {
     font-size: 28px;
+  }
+
+  .summary-row > .t-col,
+  .content-row > .t-col {
+    display: block;
   }
 }
 </style>

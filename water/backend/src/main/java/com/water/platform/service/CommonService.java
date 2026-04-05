@@ -53,7 +53,7 @@ public class CommonService {
             indexDataResp.setBlockCount(tranMap.get("blockNumber"));
             indexDataResp.setNodeCount((long) nodeStatuses.size());
             indexDataResp.setTranCount(tranMap.get("txSum"));
-            indexDataResp.setTranCount2(0L); // 交易失败的设置为0
+            indexDataResp.setTranCount2(tranMap.getOrDefault("failedTxSum", 0L));
             indexDataResp.setNodeStatusList(nodeStatuses);
             return ResultUtils.success(indexDataResp);
         } catch (Exception e) {

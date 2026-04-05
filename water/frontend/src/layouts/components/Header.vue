@@ -75,7 +75,6 @@ import {
   ChevronDownIcon,
 } from 'tdesign-icons-vue';
 import { prefix } from '@/config/global';
-import LogoFull from '@/assets/zgxt.png';
 
 import Notice from './Notice.vue';
 import Search from './Search.vue';
@@ -84,7 +83,6 @@ import MenuContent from './MenuContent.vue';
 export default Vue.extend({
   components: {
     MenuContent,
-    LogoFull,
     Notice,
     Search,
     ViewListIcon,
@@ -160,8 +158,11 @@ export default Vue.extend({
     toggleSettingPanel() {
       this.$store.commit('setting/toggleSettingPanel', true);
     },
-    handleLogout() {
-      this.$router.push(`/login?redirect=${this.$router.history.current.fullPath}`);
+    async handleLogout() {
+      await this.$store.dispatch('user/logout');
+      await this.$store.dispatch('permission/restore');
+      this.$message.success('已退出登录');
+      this.$router.replace('/login');
     },
     changeCollapsed() {
       this.$store.commit('setting/toggleSidebarCompact');

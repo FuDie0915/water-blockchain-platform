@@ -16,11 +16,10 @@
 </template>
 
 <script>
-import LogoFullIcon from '@/assets/zgxt.png';
 import { LogoGithubIcon, HelpCircleIcon, SettingIcon } from 'tdesign-icons-vue';
 
 export default {
-  components: { LogoFullIcon, LogoGithubIcon, HelpCircleIcon, SettingIcon },
+  components: { LogoGithubIcon, HelpCircleIcon, SettingIcon },
   methods: {
     navToGitHub() {
       window.open('https://github.com/Tencent/tdesign-vue-starter');

@@ -66,7 +66,7 @@ app:
 #  # 版权年份
 #  copyrightYear: 2024
   # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: ./userUpload
+  profile: D:/Project/water-blockchain-platform/water/frontend/res
 #  # 获取ip地址开关
 #  addressEnabled: false
 

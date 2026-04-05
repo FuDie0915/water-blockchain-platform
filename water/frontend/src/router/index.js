@@ -16,15 +16,24 @@ export const asyncRouterList = [ ...baseRouters, ...waterRouters];
 // 存放固定的路由
 const defaultRouterList = [
   {
+    path: '/',
+    redirect: '/login',
+  },
+  {
     path: '/login',
     name: 'login',
     component: () => import('@/pages/login/index.vue'),
   },
   {
-    path: '*',
-    redirect: '/dashboard/base',
+    path: '/403',
+    name: 'Error403',
+    component: () => import('@/pages/result/403/index.vue'),
   },
   ...asyncRouterList,
+  {
+    path: '*',
+    redirect: '/login',
+  },
 ];
 
 const createRouter = () =>

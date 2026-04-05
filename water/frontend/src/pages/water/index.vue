@@ -917,9 +917,97 @@ export default {
   created() {
     // 在组件创建时获取账号信息
     this.getAccountInfo()
+    this.autoEnterByRoute()
   },
 
   methods: {
+    async initRoleWorkbench(userType) {
+      this.currentLoginType = userType
+      this.userType = userType
+      this.currentUser = userType === 'enterprise' ? '养殖户用户' : '监管局用户'
+      await this.fetchPermissionList()
+      if (userType === 'monitor') {
+        this.waterDataType = 'turbidity'
+        await this.fetchWaterData()
+      }
+      this.isLoggedIn = true
+    },
+    async loginByCurrentSession(userType) {
+      let userAccount = localStorage.getItem('platformUserAccount')
+      if (!userAccount) {
+        try {
+          await this.$store.dispatch('user/getUserInfo')
+          userAccount = this.$store.state.user?.userInfo?.userAccount || ''
+          if (userAccount) {
+            localStorage.setItem('platformUserAccount', userAccount)
+          }
+        } catch (error) {
+          console.log(error, 'error');
+        }
+      }
+
+      if (!userAccount) {
+        this.$message.error('未找到当前平台账号，请先重新登录')
+        this.$router.replace('/login')
+        return false
+      }
+
+      const passwordCandidates = [
+        localStorage.getItem('platformUserPassword'),
+        '123456',
+      ].filter(Boolean)
+
+      this.loading = true;
+      try {
+        for (const password of passwordCandidates) {
+          const response = await Login({
+            userAccount,
+            userPassword: password,
+            loginType: userType === 'enterprise' ? 0 : 1,
+          })
+          if (response.code === 0) {
+            if (userType === 'enterprise') {
+              localStorage.setItem('companytoken', response.data.token)
+            } else {
+              localStorage.setItem('managertoken', response.data.token)
+            }
+            await this.initRoleWorkbench(userType)
+            this.$message.success(`已使用当前平台账号进入${userType === 'enterprise' ? '企业端' : '监管端'}`)
+            return true
+          }
+        }
+      } catch (error) {
+        console.log(error, 'error');
+      } finally {
+        this.loading = false;
+      }
+
+      this.$message.error('无法复用当前登录态进入该端口，请先重新登录平台账号')
+      this.$router.replace('/water/index')
+      return false
+    },
+    async autoEnterByRoute() {
+      const routeName = this.$route?.name
+      if (!['enterprise-login', 'monitor-login'].includes(routeName)) {
+        return
+      }
+
+      const userType = routeName === 'enterprise-login' ? 'enterprise' : 'monitor'
+      const roleTokenKey = userType === 'enterprise' ? 'companytoken' : 'managertoken'
+
+      if (!localStorage.getItem('satoken')) {
+        this.$message.error('请先登录平台账号')
+        this.$router.replace('/login')
+        return
+      }
+
+      if (localStorage.getItem(roleTokenKey)) {
+        await this.initRoleWorkbench(userType)
+        return
+      }
+
+      await this.loginByCurrentSession(userType)
+    },
     prevStep() {
       if (this.currentStep > 0) {
         this.currentStep--;
@@ -1008,17 +1096,9 @@ export default {
           } else {
             localStorage.setItem('managertoken', response.data.token)
           }
-          this.currentLoginType = userType
-          this.userType = userType
-          await this.fetchPermissionList()
-          if (this.userType === 'monitor') {
-            this.waterDataType = 'turbidity'
-            await this.fetchWaterData()
-          }
-          this.currentUser = userType === 'enterprise' ? '养殖户用户' : '监管局用户'
+          await this.initRoleWorkbench(userType)
           this.$message.success('登录成功')
           this.loading = false;
-          this.isLoggedIn = true
         } else {
           this.loading = false;
           this.$message.error(response.data.message)

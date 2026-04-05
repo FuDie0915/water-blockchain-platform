@@ -1,31 +1,19 @@
 <template>
   <t-form
     ref="form"
-    :class="['item-container', `register-${type}`]"
+    class="item-container register-simple"
     :data="formData"
     :rules="FORM_RULES"
     label-width="0"
     @submit="onSubmit"
   >
-    <template v-if="type == 'phone'">
-      <t-form-item name="phone">
-        <t-input v-model="formData.phone" :maxlength="11" size="large" placeholder="请输入您的手机号">
-          <template #prefix-icon>
-            <user-icon />
-          </template>
-        </t-input>
-      </t-form-item>
-    </template>
-
-    <template v-if="type == 'email'">
-      <t-form-item name="email">
-        <t-input v-model="formData.email" type="text" size="large" placeholder="请输入您的邮箱">
-          <template #prefix-icon>
-            <mail-icon />
-          </template>
-        </t-input>
-      </t-form-item>
-    </template>
+    <t-form-item name="userAccount">
+      <t-input v-model="formData.userAccount" size="large" placeholder="请输入注册账号">
+        <template #prefix-icon>
+          <user-icon />
+        </template>
+      </t-input>
+    </t-form-item>
 
     <t-form-item name="password">
       <t-input
@@ -39,62 +27,65 @@
           <lock-on-icon />
         </template>
         <template #suffix-icon>
-          <browse-icon v-if="showPsw" key="browse" @click="showPsw = !showPsw" />
-          <browse-off-icon v-else key="browse-off" @click="showPsw = !showPsw" />
+          <browse-icon v-if="showPsw" key="browse" @click="showPsw = false" />
+          <browse-off-icon v-else key="browse-off" @click="showPsw = true" />
         </template>
       </t-input>
     </t-form-item>
 
-    <template v-if="type == 'phone'">
-      <t-form-item class="verification-code" name="verifyCode">
-        <t-input v-model="formData.verifyCode" size="large" placeholder="请输入验证码" />
-        <t-button variant="outline" :disabled="countDown > 0" @click="handleCounter">
-          {{ countDown == 0 ? '发送验证码' : `${countDown}秒后可重发` }}
-        </t-button>
-      </t-form-item>
-    </template>
-
-    <t-form-item class="check-container" name="checked">
-      <t-checkbox v-model="formData.checked">我已阅读并同意 </t-checkbox> <span>TDesign服务协议</span> 和
-      <span>TDesign 隐私声明</span>
+    <t-form-item name="confirmPassword">
+      <t-input
+        v-model="formData.confirmPassword"
+        size="large"
+        :type="showConfirmPsw ? 'text' : 'password'"
+        clearable
+        placeholder="请再次输入密码"
+      >
+        <template #prefix-icon>
+          <lock-on-icon />
+        </template>
+        <template #suffix-icon>
+          <browse-icon v-if="showConfirmPsw" key="confirm-browse" @click="showConfirmPsw = false" />
+          <browse-off-icon v-else key="confirm-browse-off" @click="showConfirmPsw = true" />
+        </template>
+      </t-input>
     </t-form-item>
+
+    <div class="register-tip">注册后可直接使用该账号进入平台，默认密码以你当前填写为准。</div>
 
     <t-form-item>
-      <t-button block size="large" type="submit"> 注册 </t-button>
+      <t-button block size="large" type="submit" theme="primary" :loading="submitting">注册</t-button>
     </t-form-item>
-
-    <div class="switch-container">
-      <span class="tip" @click="switchType(type == 'phone' ? 'email' : 'phone')">{{
-        type == 'phone' ? '使用邮箱注册' : '使用手机号注册'
-      }}</span>
-    </div>
   </t-form>
 </template>
+
 <script lang="ts">
 import Vue from 'vue';
-import { UserIcon, MailIcon, BrowseIcon, BrowseOffIcon, LockOnIcon } from 'tdesign-icons-vue';
+import { UserIcon, BrowseIcon, BrowseOffIcon, LockOnIcon } from 'tdesign-icons-vue';
 
 const INITIAL_DATA = {
-  phone: '',
-  email: '',
+  userAccount: '',
   password: '',
-  verifyCode: '',
-  checked: false,
+  confirmPassword: '',
 };
 
 const FORM_RULES = {
-  phone: [{ required: true, message: '手机号必填', type: 'error' }],
-  email: [{ required: true, email: true, message: '邮箱必填', type: 'error' }],
-  password: [{ required: true, message: '密码必填', type: 'error' }],
-  verifyCode: [{ required: true, message: '验证码必填', type: 'error' }],
+  userAccount: [{ required: true, message: '请输入账号', type: 'error' }],
+  password: [{ required: true, message: '请输入密码', type: 'error' }],
+  confirmPassword: [
+    { required: true, message: '请再次输入密码', type: 'error' },
+    {
+      validator: (val, rules, formData) => val === formData.password,
+      message: '两次输入的密码不一致',
+      type: 'error',
+    },
+  ],
 };
 
-/** 高级详情 */
 export default Vue.extend({
   name: 'Register',
   components: {
     UserIcon,
-    MailIcon,
     BrowseIcon,
     BrowseOffIcon,
     LockOnIcon,
@@ -102,43 +93,37 @@ export default Vue.extend({
   data() {
     return {
       FORM_RULES,
-      type: 'phone',
-      emailOptions: [],
       formData: { ...INITIAL_DATA },
       showPsw: false,
-      countDown: 0,
-      intervalTimer: null,
+      showConfirmPsw: false,
+      submitting: false,
     };
   },
-  beforeDestroy() {
-    clearInterval(this.intervalTimer);
-  },
   methods: {
-    onSubmit({ validateResult }: { validateResult: boolean }) {
-      if (validateResult === true) {
-        if (!this.formData.checked) {
-          this.$message.error('请同意TDesign服务协议和TDesign 隐私声明');
-          return;
-        }
-        this.$message.success('注册成功');
-        this.$emit('registerSuccess');
+    async onSubmit({ validateResult }: { validateResult: boolean }) {
+      if (validateResult !== true) return;
+
+      this.submitting = true;
+      try {
+        await this.$store.dispatch('user/login', {
+          userAccount: this.formData.userAccount,
+        });
+        localStorage.setItem('platformUserPassword', this.formData.password);
+        this.$message.success('注册成功，请使用新账号登录');
+        this.$emit('register-success');
+      } finally {
+        this.submitting = false;
       }
-    },
-    switchType(val: 'email' | 'phone') {
-      this.$refs.form.reset();
-      this.type = val;
-    },
-    handleCounter() {
-      this.countDown = 60;
-      this.intervalTimer = setInterval(() => {
-        if (this.countDown > 0) {
-          this.countDown -= 1;
-        } else {
-          clearInterval(this.intervalTimer);
-          this.countDown = 0;
-        }
-      }, 1000);
     },
   },
 });
 </script>
+
+<style scoped lang="less">
+.register-tip {
+  margin: 6px 0 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #5e738a;
+}
+</style>

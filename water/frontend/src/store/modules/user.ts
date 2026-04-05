@@ -1,5 +1,5 @@
 import { TOKEN_NAME } from '@/config/global';
-import { login, logout, getUserInfo } from '@/store/api/user'
+import { login, logout as requestLogout, getUserInfo } from '@/store/api/user'
 
 const InitUserInfo = {
   roles: [],
@@ -18,10 +18,14 @@ const mutations = {
   },
   removeToken(state) {
     localStorage.removeItem(TOKEN_NAME);
+    localStorage.removeItem('platformUserAccount');
+    localStorage.removeItem('platformUserPassword');
+    localStorage.removeItem('companytoken');
+    localStorage.removeItem('managertoken');
     state.token = '';
   },
   setUserInfo(state, userInfo) {
-    state.userInfo = userInfo.userResp;
+    state.userInfo = userInfo?.userResp || userInfo || InitUserInfo;
   },
 };
 
@@ -32,14 +36,13 @@ const getters = {
 
 const actions = {
   async login({ commit }, userInfo) {
-    
     try {
       const { data } = await login(userInfo);
       console.log('data', data);
       commit('setToken', data.token);
-      // commit('setUserInfo', data.user);
+      localStorage.setItem('platformUserAccount', userInfo.userAccount || 'admin');
+      localStorage.setItem('platformUserPassword', '123456');
       return data;
-      
     } catch (error) {
       throw error;
     }
@@ -53,9 +56,19 @@ const actions = {
       throw error;
     }
   },
-  async logout({ commit }) {
+  async logout({ commit, state }) {
+    const token = state.token || localStorage.getItem(TOKEN_NAME);
+    const companyToken = localStorage.getItem('companytoken');
+    const managerToken = localStorage.getItem('managertoken');
+
     commit('removeToken');
     commit('setUserInfo', InitUserInfo);
+
+    const logoutTasks = [token, companyToken, managerToken]
+      .filter(Boolean)
+      .map((item) => requestLogout(item).catch(() => null));
+
+    Promise.allSettled(logoutTasks);
   },
 };
 

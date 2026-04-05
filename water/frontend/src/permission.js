@@ -24,11 +24,8 @@ router.beforeEach(async (to, from, next) => {
 
   if (token) {
     if (to.path === '/login') {
-      setTimeout(() => {
-        store.dispatch('user/logout');
-        store.dispatch('permission/restore');
-      });
-      next();
+      const redirect = from.path && from.path !== '/login' ? from.path : '/dashboard/base';
+      next(redirect);
       return;
     }
 
@@ -43,7 +40,7 @@ router.beforeEach(async (to, from, next) => {
         next({ ...to });
       } catch (error) {
         await store.commit('user/removeToken');
-        next('/403');
+        next('/login');
         NProgress.done();
       }
     }
@@ -52,7 +49,7 @@ router.beforeEach(async (to, from, next) => {
     if (whiteListRouters.indexOf(to.path) !== -1) {
       next();
     } else {
-      next('/403');
+      next('/login');
     }
     NProgress.done();
   }

@@ -14,19 +14,21 @@ export default [
       {
         path: 'index',
         name: 'water',
-        component: () => import('@/pages/water/index.vue'),
-        meta: { title: '水质实训' },
+        component: () => import('@/pages/water/portal.vue'),
+        meta: { title: '水质监管工作台' },
       },
       {
         path: 'enterprise-login',
         name: 'enterprise-login',
-        component: () => import('@/pages/water/enterprise.vue')
+        component: () => import('@/pages/water/workbench.vue'),
+        meta: { title: '企业工作台' },
       },
       {
         path: 'monitor-login',
         name: 'monitor-login',
-        component: () => import('@/pages/water/monitor.vue')
-      }
+        component: () => import('@/pages/water/workbench.vue'),
+        meta: { title: '监管工作台' },
+      },
     ],
   },
 ];

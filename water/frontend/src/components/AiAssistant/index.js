@@ -21,6 +21,7 @@ const AiAssistantRoot = Vue.extend({
   },
   data() {
     return {
+      // 悬浮球始终挂载显示，抽屉默认关闭
       drawerVisible: false,
       isAlert: false
     };

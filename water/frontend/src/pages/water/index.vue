@@ -624,7 +624,7 @@ export default {
         },
         {
           colKey: 'companyName',
-          title: '企业名称',
+          title: '养殖户名称',
           width: 200,
         },
         {
@@ -787,7 +787,7 @@ export default {
         },
         {
           colKey: 'userId',
-          title: '企业id',
+          title: '养殖户ID',
           width: 200,
         },
         {
@@ -840,7 +840,7 @@ export default {
         },
         {
           colKey: 'userId',
-          title: '企业Id',
+          title: '养殖户ID',
           width: 200,
         },
         {
@@ -972,7 +972,7 @@ export default {
               localStorage.setItem('managertoken', response.data.token)
             }
             await this.initRoleWorkbench(userType)
-            this.$message.success(`已使用当前平台账号进入${userType === 'enterprise' ? '企业端' : '监管端'}`)
+            this.$message.success(`已使用当前平台账号进入${userType === 'enterprise' ? '养殖户端' : '监管端'}`)
             return true
           }
         }
@@ -1048,7 +1048,7 @@ export default {
     },
     addNewItem() {
       // 新增数据逻辑
-      const newItem = { id: this.tableData.length + 1, company: '新企业', permitImage: 'new-image-url', status: '待审核' };
+      const newItem = { id: this.tableData.length + 1, company: '新养殖户', permitImage: 'new-image-url', status: '待审核' };
       this.tableData.push(newItem);
     },
     backToCards() {

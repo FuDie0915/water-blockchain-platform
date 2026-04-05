@@ -5,7 +5,7 @@
         <div class="hero-badge">海水养殖 · 许可审批 · 数据上链</div>
         <h1>水质监管工作台</h1>
         <p>
-          面向企业申报、监管审批、数据审查与智能辅助场景，提供统一清晰的业务入口与操作视图。
+          面向养殖户申报、监管审批、数据审查与智能辅助场景，提供统一清晰的业务入口与操作视图。
         </p>
       </div>
 
@@ -19,7 +19,7 @@
             </t-tag>
           </div>
           <div class="auth-item">
-            <span>企业令牌</span>
+            <span>养殖户令牌</span>
             <t-tag :theme="authStatus.companytoken ? 'success' : 'warning'" variant="light-outline">
               {{ authStatus.companytoken ? '已就绪' : '未获取' }}
             </t-tag>
@@ -76,10 +76,10 @@ export default {
       },
       rolePanels: [
         {
-          title: '企业工作台',
+          title: '养殖户工作台',
           description: '用于提交许可证申请、上传材料并查看链上校验结果。',
           path: '/water/enterprise-login',
-          buttonText: '进入企业端',
+          buttonText: '进入养殖户端',
           features: [
             '提交许可证申请',
             '查看申请进度',
@@ -101,8 +101,8 @@ export default {
       workflows: [
         {
           title: '许可证审批闭环',
-          description: '企业提交申请后，监管方可以直接审核并进行链上核验。',
-          api: '企业申报 · 监管审批 · 结果追踪',
+          description: '养殖户提交申请后，监管方可以直接审核并进行链上核验。',
+          api: '养殖户申报 · 监管审批 · 结果追踪',
         },
         {
           title: '水质数据分页监管',

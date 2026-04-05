@@ -61,20 +61,20 @@
         <template v-if="userType === 'enterprise'">
           <t-row :gutter="[16, 16]" class="content-row">
             <t-col :xs="12" :lg="4">
-              <t-card title="企业操作说明" :bordered="false" class="panel-card info-panel">
+              <t-card title="养殖户操作说明" :bordered="false" class="panel-card info-panel">
                 <ul class="guide-list">
-                  <li>使用当前平台账号自动进入企业工作台，无需再次输入账号密码。</li>
+                  <li>使用当前平台账号自动进入养殖户工作台，无需再次输入账号密码。</li>
                   <li>提交排污许可证后，监管端可直接审核并执行链上核验。</li>
                   <li>若当前存在待审批或已通过许可证，将暂时禁止重复提交。</li>
                 </ul>
 
                 <div class="account-box">
                   <div class="account-item">
-                    <label>企业登录账号</label>
+                    <label>养殖户登录账号</label>
                     <span>{{ enterpriseAccount || platformAccount }}</span>
                   </div>
                   <div class="account-item">
-                    <label>企业默认密码</label>
+                    <label>养殖户默认密码</label>
                     <span>{{ enterprisePassword || '123456' }}</span>
                   </div>
                   <div class="account-item">
@@ -87,7 +87,7 @@
 
             <t-col :xs="12" :lg="8">
               <t-card title="许可证记录" :bordered="false" class="panel-card">
-                <div class="panel-tip">展示企业已提交的许可证状态与链上比对能力。</div>
+                <div class="panel-tip">展示养殖户已提交的许可证状态与链上比对能力。</div>
                 <t-table
                   row-key="id"
                   :data="enterpriseTableData"
@@ -219,7 +219,7 @@
                 <div class="guide-panel">
                   <div class="guide-panel__title">工作说明</div>
                   <ul class="guide-list compact">
-                    <li>可集中处理企业许可证审批与结果复核。</li>
+                    <li>可集中处理养殖户许可证审批与结果复核。</li>
                     <li>支持查看水质数据并对异常记录执行批量上链。</li>
                     <li>可在当前页面完成合约信息绑定与管理。</li>
                   </ul>
@@ -379,7 +379,7 @@ export default {
         },
         {
           colKey: 'companyName',
-          title: '企业名称',
+          title: '养殖户名称',
         },
         {
           colKey: 'permit',
@@ -461,7 +461,7 @@ export default {
         },
         {
           colKey: 'companyName',
-          title: '企业名称',
+          title: '养殖户名称',
           width: 180,
         },
         {
@@ -579,7 +579,7 @@ export default {
       turbidityColumns: [
         { colKey: 'row-select', type: 'multiple', width: 50, fixed: 'left' },
         { colKey: 'id', title: '序号', width: 80 },
-        { colKey: 'userId', title: '企业 ID', width: 150 },
+        { colKey: 'userId', title: '养殖户 ID', width: 150 },
         { colKey: 'data', title: '浑浊度' },
         { colKey: 'time', title: '采集时间', width: 180 },
         {
@@ -596,7 +596,7 @@ export default {
       tdsColumns: [
         { colKey: 'row-select', type: 'multiple', width: 50, fixed: 'left' },
         { colKey: 'id', title: '序号', width: 80 },
-        { colKey: 'userId', title: '企业 ID', width: 150 },
+        { colKey: 'userId', title: '养殖户 ID', width: 150 },
         { colKey: 'data', title: 'TDS 值' },
         { colKey: 'time', title: '采集时间', width: 180 },
         {
@@ -614,18 +614,18 @@ export default {
   },
   computed: {
     routeRoleText() {
-      return this.$route?.name === 'monitor-login' ? '监管端' : '企业端';
+      return this.$route?.name === 'monitor-login' ? '监管端' : '养殖户端';
     },
     roleBadge() {
-      return this.userType === 'monitor' ? '监管端 · 许可证审批 · 水数据上链' : '企业端 · 许可证申请 · 链上核验';
+      return this.userType === 'monitor' ? '监管端 · 许可证审批 · 水数据上链' : '养殖户端 · 许可证申请 · 链上核验';
     },
     roleTitle() {
-      return this.userType === 'monitor' ? '监管水质审查工作台' : '企业水质合规工作台';
+      return this.userType === 'monitor' ? '监管水质审查工作台' : '养殖户水质合规工作台';
     },
     roleSubtitle() {
       return this.userType === 'monitor'
-        ? '集中查看企业许可证、审批请求与水质分页数据，并直接执行合约绑定和批量上链。'
-        : '基于当前平台登录态快速进入企业工作台，完成许可证提交、状态跟踪与链上比对。';
+        ? '集中查看养殖户许可证、审批请求与水质分页数据，并直接执行合约绑定和批量上链。'
+        : '基于当前平台登录态快速进入养殖户工作台，完成许可证提交、状态跟踪与链上比对。';
     },
     platformAccount() {
       return localStorage.getItem('platformUserAccount') || this.$store.state.user?.userInfo?.userAccount || '--';
@@ -657,7 +657,7 @@ export default {
           {
             title: '待审批许可证',
             value: this.pendingPermitCount,
-            description: '待监管侧审核的企业申请数',
+            description: '待监管侧审核的养殖户申请数',
           },
           {
             title: '已上链许可证',
@@ -681,7 +681,7 @@ export default {
         {
           title: '许可证总数',
           value: this.enterpriseTableData.length,
-          description: '企业已提交的许可证记录',
+          description: '养殖户已提交的许可证记录',
         },
         {
           title: '待审批',
@@ -773,7 +773,7 @@ export default {
               localStorage.setItem('managertoken', response.data.token);
             }
             await this.initRoleWorkbench(userType);
-            this.$message.success(`已使用当前平台账号进入${userType === 'enterprise' ? '企业端' : '监管端'}`);
+            this.$message.success(`已使用当前平台账号进入${userType === 'enterprise' ? '养殖户端' : '监管端'}`);
             return true;
           }
         }

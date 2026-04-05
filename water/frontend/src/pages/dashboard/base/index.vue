@@ -132,11 +132,11 @@ export default {
       quickEntries: [
         {
           title: '水质监管工作台',
-          description: '进入企业申请、监管审批与链上校验流程。',
+          description: '进入养殖户申请、监管审批与链上校验流程。',
           path: '/water/index',
         },
         {
-          title: '企业登录入口',
+          title: '养殖户登录入口',
           description: '快速进入许可证提交与状态查询页面。',
           path: '/water/enterprise-login',
         },
@@ -153,7 +153,7 @@ export default {
         },
         {
           title: '许可证审批与数据监管',
-          description: '支持企业申报、监管审批、结果追踪与水数据处置。',
+          description: '支持养殖户申报、监管审批、结果追踪与水数据处置。',
         },
         {
           title: '智能辅助问答',

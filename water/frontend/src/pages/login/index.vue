@@ -7,7 +7,7 @@
         <p class="brand-subtitle">基于区块链的海水养殖可信水质监管平台</p>
 
         <div class="brand-intro">
-          聚合首页看板、水质许可证审批、链上存证和 AI 助手，为企业与监管部门提供统一入口。
+          聚合首页看板、水质许可证审批、链上存证和 AI 助手，为养殖户与监管部门提供统一入口。
         </div>
 
         <div class="feature-list">
@@ -17,7 +17,7 @@
           </div>
           <div class="feature-item">
             <strong>水质监管</strong>
-            <span>覆盖企业申报、监管审批、数据审查与结果追踪闭环。</span>
+            <span>覆盖养殖户申报、监管审批、数据审查与结果追踪闭环。</span>
           </div>
           <div class="feature-item">
             <strong>智能辅助</strong>

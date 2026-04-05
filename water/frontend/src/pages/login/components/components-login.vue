@@ -33,7 +33,7 @@
       </t-input>
     </t-form-item>
 
-    <div class="login-help-row">支持平台账号登录；企业与监管角色可在水质模块中进入各自工作台。</div>
+    <div class="login-help-row">支持平台账号登录；养殖户与监管角色可在水质模块中进入各自工作台。</div>
 
     <t-form-item class="btn-container">
       <t-button block size="large" theme="primary" type="submit" :loading="submitting">进入平台</t-button>

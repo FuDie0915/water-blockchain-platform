@@ -187,7 +187,7 @@ export default {
         },
         {
           colKey: 'userId',
-          title: '企业ID',
+          title: '养殖户ID',
           width: '190',
         },
         {
@@ -237,7 +237,7 @@ export default {
         },
         {
           colKey: 'userId',
-          title: '企业ID',
+          title: '养殖户ID',
           width: '200',
         },
         {

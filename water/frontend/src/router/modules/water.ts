@@ -21,7 +21,7 @@ export default [
         path: 'enterprise-login',
         name: 'enterprise-login',
         component: () => import('@/pages/water/workbench.vue'),
-        meta: { title: '企业工作台' },
+        meta: { title: '养殖户工作台' },
       },
       {
         path: 'monitor-login',

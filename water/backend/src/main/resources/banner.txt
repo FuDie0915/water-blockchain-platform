@@ -1,0 +1,2 @@
+swagger-ui路径: /swagger-ui/index.html
+swagger-api路径: /v3/api-docs

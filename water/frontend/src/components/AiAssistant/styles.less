@@ -1,0 +1,848 @@
+// ============================================
+// 水环境监管平台 - AI 助手悬浮窗样式
+// UI/UX Pro Max 设计系统 v2.0
+// ============================================
+
+// 设计原则：
+// 1. 清新水质主题：使用渐变蓝绿配色，呼应水环境
+// 2. 玻璃拟态：半透明背景 + 柔和模糊
+// 3. 微动效：流畅过渡，避免突兀跳动
+// 4. 无障碍：高对比度，清晰焦点状态
+
+// 前缀：所有类名必须加 .ai-assistant- 前缀
+// 主题自适应：动态读取 --td-brand-color
+// 深色模式：检测 [theme-mode="dark"]
+
+// ============================================
+// CSS 变量定义
+// ============================================
+:root {
+  // 水质主题色系（清新蓝绿渐变）
+  --ai-water-primary: #0EA5E9;
+  --ai-water-secondary: #06B6D4;
+  --ai-water-accent: #14B8A6;
+  --ai-water-light: #E0F2FE;
+  --ai-water-dark: #0C4A6E;
+
+  // 玻璃拟态变量
+  --ai-glass-bg: rgba(255, 255, 255, 0.85);
+  --ai-glass-border: rgba(255, 255, 255, 0.5);
+  --ai-glass-shadow: 0 8px 32px rgba(14, 165, 233, 0.15);
+  --ai-glass-blur: blur(20px);
+
+  // 间距系统
+  --ai-space-xs: 4px;
+  --ai-space-sm: 8px;
+  --ai-space-md: 12px;
+  --ai-space-lg: 16px;
+  --ai-space-xl: 20px;
+
+  // 圆角系统
+  --ai-radius-sm: 8px;
+  --ai-radius-md: 12px;
+  --ai-radius-lg: 16px;
+  --ai-radius-full: 9999px;
+
+  // 过渡时长
+  --ai-transition-fast: 150ms;
+  --ai-transition-normal: 250ms;
+  --ai-transition-slow: 350ms;
+}
+
+// 深色模式变量
+[theme-mode="dark"] {
+  --ai-glass-bg: rgba(30, 41, 59, 0.9);
+  --ai-glass-border: rgba(255, 255, 255, 0.1);
+  --ai-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+// ============================================
+// 悬浮球样式 (Floating Ball)
+// UI/UX Pro Max: 水波纹呼吸效果 + 玻璃拟态
+// ============================================
+
+.ai-assistant-ball {
+  // 基础尺寸
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  position: fixed;
+  z-index: 99999;
+
+  // 水质主题渐变：模拟清澈水流的蓝绿渐变
+  background: linear-gradient(
+    135deg,
+    var(--ai-water-primary) 0%,
+    var(--ai-water-secondary) 50%,
+    var(--ai-water-accent) 100%
+  );
+
+  // 多层阴影 + 玻璃光感
+  box-shadow:
+    0 4px 16px rgba(14, 165, 233, 0.3),
+    0 8px 32px rgba(6, 182, 212, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+
+  cursor: pointer;
+  user-select: none;
+  transition:
+    transform var(--ai-transition-normal) cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow var(--ai-transition-normal) ease;
+
+  // 图标容器：确保完美居中
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // 水波纹效果
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: linear-gradient(
+      135deg,
+      var(--ai-water-primary),
+      var(--ai-water-accent)
+    );
+    opacity: 0;
+    transition: opacity var(--ai-transition-slow) ease;
+    z-index: -1;
+  }
+
+  // 水滴图标样式
+  .ai-assistant-icon {
+    width: 32px;
+    height: 32px;
+    color: #ffffff;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+  }
+
+  // ============================================
+  // 状态机：Idle (呼吸态)
+  // 水波纹扩散效果 + 轻微缩放
+  // ============================================
+  &.ai-assistant-idle {
+    animation: ai-water-breathing 3s ease-in-out infinite;
+  }
+
+  @keyframes ai-water-breathing {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow:
+        0 4px 16px rgba(14, 165, 233, 0.3),
+        0 8px 32px rgba(6, 182, 212, 0.2),
+        inset 0 2px 4px rgba(255, 255, 255, 0.2),
+        0 0 0 0 rgba(14, 165, 233, 0.4);
+    }
+    50% {
+      transform: scale(1.04);
+      box-shadow:
+        0 6px 20px rgba(14, 165, 233, 0.4),
+        0 12px 40px rgba(6, 182, 212, 0.3),
+        inset 0 2px 4px rgba(255, 255, 255, 0.25),
+        0 0 20px 8px rgba(14, 165, 233, 0);
+    }
+  }
+
+  // ============================================
+  // 状态机：Dragging (拖拽态)
+  // ============================================
+  &.ai-assistant-dragging {
+    transform: scale(1.12) !important;
+    animation: none !important;
+    box-shadow:
+      0 16px 40px rgba(14, 165, 233, 0.4),
+      0 24px 60px rgba(6, 182, 212, 0.3),
+      inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    cursor: grabbing;
+    transition: none !important;
+
+    &::before {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+  }
+
+  // ============================================
+  // 状态机：Snapped (吸附态)
+  // ============================================
+  &.ai-assistant-snapping {
+    transition:
+      left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+      top 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+      transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  // ============================================
+  // 状态机：Alert (警报态)
+  // 柔和脉冲，避免刺眼
+  // ============================================
+  &.ai-assistant-alert {
+    animation: ai-alert-pulse 1.2s ease-in-out infinite;
+    border: 2px solid #EF4444;
+  }
+
+  @keyframes ai-alert-pulse {
+    0%, 100% {
+      box-shadow:
+        0 4px 16px rgba(239, 68, 68, 0.3),
+        0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% {
+      box-shadow:
+        0 6px 24px rgba(239, 68, 68, 0.4),
+        0 0 0 12px rgba(239, 68, 68, 0);
+    }
+  }
+
+  // ============================================
+  // 透明度过渡
+  // ============================================
+  &.ai-assistant-idle-timeout {
+    opacity: 0.65;
+    transition: opacity 0.5s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  // ============================================
+  // Hover 态 - 水波纹扩散
+  // ============================================
+  &:hover:not(.ai-assistant-dragging) {
+    transform: scale(1.06);
+
+    &::before {
+      opacity: 0.6;
+      animation: ai-ripple 1.5s ease-out infinite;
+    }
+  }
+
+  @keyframes ai-ripple {
+    0% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(1.3);
+      opacity: 0;
+    }
+  }
+}
+
+// ============================================
+// 深色模式适配
+// ============================================
+[theme-mode="dark"] {
+  .ai-assistant-ball {
+    // 深色模式使用更亮的渐变
+    background: linear-gradient(
+      135deg,
+      #38BDF8 0%,
+      #22D3EE 50%,
+      #2DD4BF 100%
+    );
+
+    &.ai-assistant-idle {
+      animation: ai-water-breathing-dark 3s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes ai-water-breathing-dark {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      0 4px 16px rgba(56, 189, 248, 0.4),
+      0 8px 32px rgba(34, 211, 238, 0.3),
+      0 0 0 0 rgba(56, 189, 248, 0.5);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow:
+      0 6px 20px rgba(56, 189, 248, 0.5),
+      0 12px 40px rgba(34, 211, 238, 0.4),
+      0 0 24px 10px rgba(56, 189, 248, 0);
+  }
+}
+
+// ============================================
+// 抽屉样式 (Chat Drawer)
+// 玻璃拟态背景 + 精致边框
+// ============================================
+
+// 覆盖 TDesign Drawer 默认样式
+.ai-assistant-root .t-drawer {
+  .t-drawer__content-wrapper {
+    background: transparent;
+  }
+
+  .t-drawer__body {
+    // 玻璃拟态背景
+    background: var(--ai-glass-bg);
+    backdrop-filter: var(--ai-glass-blur);
+    -webkit-backdrop-filter: var(--ai-glass-blur);
+
+    // 半透明边框
+    border-left: 1px solid var(--ai-glass-border);
+
+    // 柔和阴影
+    box-shadow: var(--ai-glass-shadow);
+  }
+}
+
+.ai-assistant-drawer-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-assistant-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ai-space-lg) var(--ai-space-xl);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+  background: rgba(14, 165, 233, 0.03);
+}
+
+[theme-mode="dark"] .ai-assistant-drawer-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.ai-assistant-drawer-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--td-text-color-primary, #0F172A);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ai-space-sm);
+
+  // 添加水滴图标装饰
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ai-water-primary), var(--ai-water-accent));
+    box-shadow: 0 0 8px rgba(14, 165, 233, 0.5);
+  }
+}
+
+.ai-assistant-drawer-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// 内容淡入动画
+.ai-assistant-chat-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: ai-content-fade-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+}
+
+@keyframes ai-content-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// ============================================
+// 快捷指令 Chips
+// 现代圆角设计 + 渐变边框
+// ============================================
+.ai-assistant-quick-actions {
+  padding: var(--ai-space-lg) var(--ai-space-xl) 0;
+  display: flex;
+  gap: var(--ai-space-sm);
+  flex-wrap: wrap;
+}
+
+.ai-assistant-chip {
+  padding: 8px 16px;
+  border-radius: var(--ai-radius-full);
+  background: linear-gradient(
+    135deg,
+    rgba(14, 165, 233, 0.08) 0%,
+    rgba(20, 184, 166, 0.08) 100%
+  );
+  color: var(--td-text-color-primary, #0F172A);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  transition: all var(--ai-transition-normal) cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+
+  // 渐变高光效果
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      transparent 100%
+    );
+    opacity: 0;
+    transition: opacity var(--ai-transition-fast) ease;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(
+      135deg,
+      rgba(14, 165, 233, 0.15) 0%,
+      rgba(20, 184, 166, 0.15) 100%
+    );
+    border-color: var(--ai-water-primary);
+    box-shadow:
+      0 4px 12px rgba(14, 165, 233, 0.2),
+      0 0 0 3px rgba(14, 165, 233, 0.1);
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+[theme-mode="dark"] .ai-assistant-chip {
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.15) 0%,
+    rgba(45, 212, 191, 0.15) 100%
+  );
+  border-color: rgba(56, 189, 248, 0.3);
+
+  &:hover {
+    background: linear-gradient(
+      135deg,
+      rgba(56, 189, 248, 0.25) 0%,
+      rgba(45, 212, 191, 0.25) 100%
+    );
+    border-color: #38BDF8;
+    box-shadow:
+      0 4px 12px rgba(56, 189, 248, 0.3),
+      0 0 0 3px rgba(56, 189, 248, 0.15);
+  }
+}
+
+// ============================================
+// 聊天消息样式
+// 更现代的气泡设计
+// ============================================
+
+.ai-assistant-messages {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ai-space-lg);
+  overflow-y: auto;
+  padding: var(--ai-space-lg) var(--ai-space-xl);
+
+  // 自定义滚动条
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(14, 165, 233, 0.2);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(14, 165, 233, 0.3);
+    }
+  }
+}
+
+.ai-assistant-message {
+  display: flex;
+  gap: 10px;
+  max-width: 88%;
+  animation: ai-message-appear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  &.ai-assistant-message-user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  &.ai-assistant-message-ai {
+    align-self: flex-start;
+  }
+}
+
+@keyframes ai-message-appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ai-assistant-message-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  &.ai-assistant-avatar-user {
+    background: linear-gradient(135deg, var(--ai-water-primary), var(--ai-water-accent));
+    color: #ffffff;
+  }
+
+  &.ai-assistant-avatar-ai {
+    background: linear-gradient(135deg, var(--ai-water-secondary), var(--ai-water-accent));
+    color: #ffffff;
+  }
+
+  .ai-assistant-avatar-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+  }
+}
+
+.ai-assistant-message-bubble {
+  padding: 12px 16px;
+  border-radius: var(--ai-radius-lg);
+  font-size: 14px;
+  line-height: 1.6;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: box-shadow var(--ai-transition-fast) ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &.ai-assistant-bubble-user {
+    background: linear-gradient(135deg, var(--ai-water-primary), var(--ai-water-secondary));
+    color: #ffffff;
+    border-bottom-right-radius: 6px;
+  }
+
+  &.ai-assistant-bubble-ai {
+    background: var(--td-bg-color-container-hover, #f8fafc);
+    color: var(--td-text-color-primary, #0F172A);
+    border-bottom-left-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+  }
+}
+
+[theme-mode="dark"] .ai-assistant-bubble-ai {
+  background: rgba(51, 65, 85, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+// 打字机光标效果 - 更柔和
+.ai-assistant-typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background: linear-gradient(to bottom, var(--ai-water-primary), var(--ai-water-accent));
+  animation: ai-cursor-blink 1s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  border-radius: 1px;
+}
+
+@keyframes ai-cursor-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+// ============================================
+// 输入区域
+// 现代聚焦态 + 渐变边框
+// ============================================
+.ai-assistant-input-area {
+  padding: var(--ai-space-lg) var(--ai-space-xl) var(--ai-space-xl);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(14, 165, 233, 0.02);
+  flex-shrink: 0;
+}
+
+[theme-mode="dark"] .ai-assistant-input-area {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  background: rgba(14, 165, 233, 0.05);
+}
+
+.ai-assistant-input-wrapper {
+  display: flex;
+  gap: var(--ai-space-sm);
+  align-items: flex-end;
+}
+
+.ai-assistant-input {
+  flex: 1;
+  min-height: 44px;
+  max-height: 120px;
+  padding: 10px 14px;
+  border: 1.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--ai-radius-md);
+  background: var(--td-bg-color-container, #ffffff);
+  color: var(--td-text-color-primary, #0F172A);
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  transition: all var(--ai-transition-normal) ease;
+
+  &:focus {
+    border-color: var(--ai-water-primary);
+    box-shadow:
+      0 0 0 4px rgba(14, 165, 233, 0.1),
+      0 2px 8px rgba(14, 165, 233, 0.1);
+  }
+
+  &:hover:not(:focus) {
+    border-color: rgba(14, 165, 233, 0.3);
+  }
+
+  &::placeholder {
+    color: var(--td-text-color-placeholder, #94A3B8);
+  }
+}
+
+[theme-mode="dark"] .ai-assistant-input {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(30, 41, 59, 0.8);
+
+  &:focus {
+    border-color: #38BDF8;
+    box-shadow:
+      0 0 0 4px rgba(56, 189, 248, 0.15),
+      0 2px 8px rgba(56, 189, 248, 0.2);
+  }
+}
+
+.ai-assistant-send-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--ai-radius-md);
+  background: linear-gradient(135deg, var(--ai-water-primary), var(--ai-water-secondary));
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--ai-transition-normal) cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow:
+      0 4px 16px rgba(14, 165, 233, 0.4),
+      0 0 0 4px rgba(14, 165, 233, 0.1);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .ai-assistant-send-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    transform: translateX(1px);
+  }
+}
+
+// ============================================
+// 新建对话按钮
+// ============================================
+.ai-assistant-new-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--ai-radius-md);
+  background: var(--td-bg-color-container, #ffffff);
+  color: var(--td-text-color-primary, #0F172A);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--ai-transition-normal) ease;
+
+  &:hover {
+    border-color: var(--ai-water-primary);
+    color: var(--ai-water-primary);
+    background: rgba(14, 165, 233, 0.05);
+  }
+
+  .ai-assistant-new-icon {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+  }
+}
+
+[theme-mode="dark"] .ai-assistant-new-chat-btn {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(30, 41, 59, 0.8);
+
+  &:hover {
+    border-color: #38BDF8;
+    color: #38BDF8;
+    background: rgba(56, 189, 248, 0.1);
+  }
+}
+
+// ============================================
+// 关闭按钮样式
+// ============================================
+.ai-assistant-close-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--ai-radius-sm);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--ai-transition-fast) ease;
+  color: var(--td-text-color-secondary, #64748B);
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--td-text-color-primary, #0F172A);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+[theme-mode="dark"] .ai-assistant-close-btn {
+  color: #94A3B8;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #F1F5F9;
+  }
+}
+
+.ai-assistant-close-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+// ============================================
+// 加载状态 - 水波纹风格
+// ============================================
+.ai-assistant-loading {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px;
+
+  .ai-assistant-loading-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ai-water-primary), var(--ai-water-accent));
+    animation: ai-water-bounce 1.4s ease-in-out infinite;
+
+    &:nth-child(1) {
+      animation-delay: 0s;
+    }
+
+    &:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+  }
+}
+
+@keyframes ai-water-bounce {
+  0%, 60%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  30% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+// ============================================
+// 减少动画偏好支持
+// ============================================
+@media (prefers-reduced-motion: reduce) {
+  .ai-assistant-ball,
+  .ai-assistant-message,
+  .ai-assistant-chip,
+  .ai-assistant-send-btn {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .ai-assistant-chat-content {
+    animation: none !important;
+  }
+}
+
+// ============================================
+// 响应式适配
+// ============================================
+@media (max-width: 768px) {
+  .ai-assistant-drawer {
+    .t-drawer__body {
+      width: 100% !important;
+    }
+  }
+
+  .ai-assistant-message {
+    max-width: 92%;
+  }
+}

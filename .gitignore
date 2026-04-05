@@ -1,0 +1,8 @@
+# Root IDE metadata
+/.idea/
+
+# Local Claude Code artifacts
+/.claude/
+
+# Local root logs
+/logs/

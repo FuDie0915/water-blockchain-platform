@@ -1,0 +1,35 @@
+package com.gk.platform.service;
+
+import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.gk.platform.base.common.BaseResponse;
+import com.gk.platform.base.common.ResultUtils;
+import com.gk.platform.mapper.UserContractMapper;
+import com.gk.platform.model.dto.req.UserContractQueryReq;
+import com.gk.platform.model.entity.UserContract;
+import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
+
+/**
+ * @author ：devon
+ * @date ：2024/11/12 14:39
+ * @description：用户合约业务逻辑类
+ * @version: 1.0
+ */
+@Service
+public class UserContractService {
+    @Autowired
+    private UserContractMapper userContractMapper;
+
+    public BaseResponse<UserContract> query(UserContractQueryReq req) {
+        long userId = StpUtil.getLoginIdAsLong();
+        UserContract userContract = userContractMapper.selectOne(new LambdaQueryWrapper<UserContract>()
+                .eq(UserContract::getUserId, userId)
+                .eq(UserContract::getContractType, req.getContractType()));
+        return ResultUtils.success(userContract);
+    }
+
+}
+

@@ -16,7 +16,7 @@ export default [
         path: 'base',
         name: 'DashboardBase',
         component: () => import('@/pages/dashboard/base/index.vue'),
-        meta: { title: '区块链浏览器' },
+        meta: { title: '区块链浏览器', roleCode: 'admin', allowedRoles: ['admin'] },
       },
       // {
       //   path: 'detail',

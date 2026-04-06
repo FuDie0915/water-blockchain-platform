@@ -21,6 +21,8 @@ public class SaTokenConfigure implements WebMvcConfigurer {
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                         "/user/loginOrRegister",
+                        "/user/register",
+                        "/water/user/login",
                         "/water/data/collect",
                         "/profile/upload/**",
                         "/static/**",

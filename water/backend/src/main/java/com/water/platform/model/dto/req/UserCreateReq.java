@@ -4,6 +4,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.NotBlank;
 
@@ -15,13 +16,19 @@ import javax.validation.constraints.NotBlank;
  */
 @ApiModel(description = "用户创建输入参数")
 @AllArgsConstructor
+@NoArgsConstructor
 @Data
 public class UserCreateReq {
     @ApiModelProperty(value = "账号", required = true)
     @NotBlank
     private String userAccount;
 
-    @ApiModelProperty(value = "姓名", required = true)
-    @NotBlank
+    @ApiModelProperty(value = "密码")
+    private String userPassword;
+
+    @ApiModelProperty(value = "姓名")
     private String userName;
+
+    @ApiModelProperty(value = "角色类型(admin/company/manager)")
+    private String userRole;
 }

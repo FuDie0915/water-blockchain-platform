@@ -7,21 +7,21 @@
         <p class="brand-subtitle">基于区块链的海水养殖可信水质监管平台</p>
 
         <div class="brand-intro">
-          聚合首页看板、水质许可证审批、链上存证和 AI 助手，为养殖户与监管部门提供统一入口。
+          聚合首页看板、水质许可证审批、链上存证和 AI 助手，为多角色业务场景提供统一入口。
         </div>
 
         <div class="feature-list">
           <div class="feature-item">
-            <strong>可信上链</strong>
-            <span>集中展示链上运行态、关键统计指标与业务留痕结果。</span>
+            <strong>平台总览</strong>
+            <span>特殊平台账号登录后会自动进入总览页，统一查看区块链全局态势。</span>
           </div>
           <div class="feature-item">
-            <strong>水质监管</strong>
-            <span>覆盖养殖户申报、监管审批、数据审查与结果追踪闭环。</span>
+            <strong>养殖户端</strong>
+            <span>用于许可证申报、材料上传、链上校验与进度追踪。</span>
           </div>
           <div class="feature-item">
-            <strong>智能辅助</strong>
-            <span>右下角提供智能助手入口，支持快速问答和辅助分析。</span>
+            <strong>监管端</strong>
+            <span>用于审批许可证、查看水质数据、执行监管核验与处置。</span>
           </div>
         </div>
       </section>
@@ -29,9 +29,9 @@
       <section class="form-panel">
         <div class="panel-header">
           <div>
-            <div class="panel-tag">统一登录门户</div>
-            <h2>{{ type === 'register' ? '创建平台账号' : '欢迎登录' }}</h2>
-            <p>登录后可进入区块链看板、水质监管工作台和 AI 助手。</p>
+            <div class="panel-tag">{{ currentPanelTag }}</div>
+            <h2>{{ type === 'register' ? '创建角色账号' : '选择登录端口' }}</h2>
+            <p>养殖户与监管端支持独立登录/注册，登录成功后将自动进入对应角色控制台。</p>
           </div>
         </div>
 
@@ -40,8 +40,23 @@
           <button :class="['switch-tab', { active: type === 'register' }]" @click="switchType('register')">开户注册</button>
         </div>
 
-        <login v-if="type === 'login'" />
-        <register v-else @register-success="switchType('login')" />
+        <div class="role-switch">
+          <button
+            :class="['role-option', { active: activeRole === 'company' }]"
+            @click="type === 'register' ? selectRegisterRole('company') : selectLoginRole('company')"
+          >
+            {{ type === 'register' ? '养殖户注册' : '养殖户登录' }}
+          </button>
+          <button
+            :class="['role-option', { active: activeRole === 'manager' }]"
+            @click="type === 'register' ? selectRegisterRole('manager') : selectLoginRole('manager')"
+          >
+            {{ type === 'register' ? '监管端注册' : '监管端登录' }}
+          </button>
+        </div>
+
+        <login v-if="type === 'login'" :role="loginRole" />
+        <register v-else :role="registerRole" @register-success="handleRegisterSuccess" />
       </section>
     </div>
 
@@ -62,11 +77,43 @@ export default {
   data() {
     return {
       type: 'login',
+      loginRole: 'company',
+      registerRole: 'company',
     };
+  },
+  computed: {
+    activeRole() {
+      return this.type === 'register' ? this.registerRole : this.loginRole;
+    },
+    currentPanelTag() {
+      if (this.type === 'register') {
+        return this.registerRole === 'manager' ? '监管端开户注册' : '养殖户开户注册';
+      }
+
+      if (this.loginRole === 'admin') return '平台总览入口';
+      if (this.loginRole === 'manager') return '监管端登录入口';
+      return '养殖户登录入口';
+    },
   },
   methods: {
     switchType(val) {
       this.type = val;
+      if (val === 'register') {
+        this.registerRole = this.registerRole || 'company';
+      }
+    },
+    selectLoginRole(role) {
+      this.type = 'login';
+      this.loginRole = role;
+    },
+    selectRegisterRole(role) {
+      this.type = 'register';
+      this.registerRole = role;
+    },
+    handleRegisterSuccess(payload) {
+      const nextRole = typeof payload === 'string' ? payload : payload?.role;
+      this.type = 'login';
+      this.loginRole = nextRole || this.registerRole;
     },
   },
 };

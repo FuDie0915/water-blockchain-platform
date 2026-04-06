@@ -17,8 +17,7 @@
                 <t-button variant="outline" @click="currentView = 'waterData'">水数据审查</t-button>
                 <t-button variant="outline" @click="showContractDialog">绑定智能合约</t-button>
               </template>
-              <t-button variant="text" @click="goPortal">返回入口</t-button>
-              <t-button variant="text" @click="logout">退出角色</t-button>
+              <t-button variant="text" @click="logout">退出登录</t-button>
             </div>
           </div>
 
@@ -783,8 +782,8 @@ export default {
         this.loading = false;
       }
 
-      this.$message.error('无法复用当前登录态进入该端口，请先重新登录平台账号');
-      this.$router.replace('/water/index');
+      this.$message.error('无法复用当前登录态进入该端口，请重新登录');
+      this.$router.replace('/login');
       return false;
     },
     async autoEnterByRoute() {
@@ -802,6 +801,34 @@ export default {
         return;
       }
 
+      let currentRole = this.$store.getters['user/roles'] || localStorage.getItem('platformUserRole') || '';
+      if (!currentRole) {
+        try {
+          const data = await this.$store.dispatch('user/getUserInfo');
+          currentRole = data?.userResp?.userRole || data?.userRole || '';
+        } catch (error) {
+          console.log(error, 'error');
+        }
+      }
+
+      if (currentRole === 'admin') {
+        this.$message.warning('当前账号将自动进入平台总览页');
+        this.$router.replace('/dashboard/base');
+        return;
+      }
+
+      if (currentRole === 'company' && userType !== 'enterprise') {
+        this.$message.warning('当前为养殖户登录态，已返回养殖户控制台');
+        this.$router.replace('/water/enterprise-login');
+        return;
+      }
+
+      if (currentRole === 'manager' && userType !== 'monitor') {
+        this.$message.warning('当前为监管端登录态，已返回监管控制台');
+        this.$router.replace('/water/monitor-login');
+        return;
+      }
+
       if (localStorage.getItem(roleTokenKey)) {
         this.loading = true;
         try {
@@ -814,21 +841,18 @@ export default {
 
       await this.loginByCurrentSession(userType);
     },
-    goPortal() {
-      this.$router.push('/water/index');
-    },
-    logout() {
-      if (this.userType === 'enterprise') {
-        Logout(localStorage.getItem('companytoken'));
-        localStorage.removeItem('companytoken');
-      } else {
-        Logout(localStorage.getItem('managertoken'));
-        localStorage.removeItem('managertoken');
+    async logout() {
+      try {
+        await this.$store.dispatch('user/logout');
+        await this.$store.dispatch('permission/restore');
+        this.$message.success('已退出登录');
+      } finally {
+        this.isLoggedIn = false;
+        this.userType = '';
+        this.currentUser = '';
+        this.currentLoginType = '';
+        this.$router.replace('/login').catch(() => '');
       }
-      this.isLoggedIn = false;
-      this.userType = '';
-      this.currentUser = '';
-      this.$router.push('/water/index');
     },
     uploadSuccess(response) {
       const fileName = response?.response?.fileName || response?.file?.response?.fileName;

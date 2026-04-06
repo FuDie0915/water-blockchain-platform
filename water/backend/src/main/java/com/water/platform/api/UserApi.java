@@ -32,6 +32,12 @@ public class UserApi {
         return userService.create(userCreateReq, false);
     }
 
+    @PostMapping("/register")
+    @ApiOperation("平台注册(养殖户/监管端)")
+    public BaseResponse<Boolean> register(@RequestBody @Validated UserCreateReq userCreateReq) {
+        return userService.register(userCreateReq);
+    }
+
     @GetMapping("/getLoginInfoByToken/{token}")
     @ApiOperation("获取登录用户信息(各类token通用)")
     public BaseResponse<UserLoginResp> getCurrentUserInfo(@PathVariable ("token") String token) {

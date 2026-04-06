@@ -1,5 +1,5 @@
-import NProgress from 'nprogress'; // progress bar
-import 'nprogress/nprogress.css'; // progress bar style
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
 
 import store from '@/store';
 import router from '@/router';
@@ -8,44 +8,82 @@ NProgress.configure({ showSpinner: false });
 
 const whiteListRouters = store.getters['permission/whiteListRouters'];
 
+function normalizeRoles(roleValue) {
+  if (Array.isArray(roleValue)) return roleValue;
+  return roleValue ? [roleValue] : [];
+}
+
+function getDefaultRouteByRoles(roles) {
+  if (roles.includes('admin')) return '/dashboard/base';
+  if (roles.includes('manager')) return '/water/monitor-login';
+  if (roles.includes('company')) return '/water/enterprise-login';
+  return '/login';
+}
+
+function clearInvalidRoleTokens(roles) {
+  if (roles.includes('admin')) {
+    localStorage.removeItem('companytoken');
+    localStorage.removeItem('managertoken');
+    return;
+  }
+
+  if (roles.includes('company')) {
+    localStorage.removeItem('managertoken');
+  }
+
+  if (roles.includes('manager')) {
+    localStorage.removeItem('companytoken');
+  }
+}
+
+function isRouteAllowed(to, roles) {
+  const allowedRoles = to.meta?.allowedRoles;
+  if (!Array.isArray(allowedRoles) || allowedRoles.length === 0) {
+    return true;
+  }
+  return roles.some((role) => allowedRoles.includes(role));
+}
+
 router.beforeEach(async (to, from, next) => {
   NProgress.start();
-  
-  // 从 fullPath 解析 satoken
-  let urlToken = null;
-  console.log(to.fullPath);
-  if (to.fullPath.includes('/dashboard/base?satoken=')) {
-    urlToken = to.fullPath.split('satoken=')[1].split('&')[0];
-    console.log(urlToken, "token");
-    store.commit('user/setToken', urlToken);
+
+  const urlTokenMatch = to.fullPath.match(/[?&]satoken=([^&]+)/);
+  if (urlTokenMatch?.[1]) {
+    store.commit('user/setToken', urlTokenMatch[1]);
   }
-  // 获取 token，避免重复获取
+
   const token = store.getters['user/token'];
 
   if (token) {
-    if (to.path === '/login') {
-      const redirect = from.path && from.path !== '/login' ? from.path : '/dashboard/base';
-      next(redirect);
-      return;
-    }
+    try {
+      let roles = normalizeRoles(store.getters['user/roles']);
 
-    const roles = store.getters['user/roles'];
-    if (roles && roles.length > 0) {
-      next();
-    } else {
-      try {
-        console.log("获取用户信息");
+      if (!roles.length) {
         await store.dispatch('user/getUserInfo');
         await store.dispatch('permission/initRoutes', store.getters['user/roles']);
-        next({ ...to });
-      } catch (error) {
-        await store.commit('user/removeToken');
-        next('/login');
-        NProgress.done();
+        roles = normalizeRoles(store.getters['user/roles']);
       }
+
+      clearInvalidRoleTokens(roles);
+      const defaultRoute = getDefaultRouteByRoles(roles);
+
+      if (to.path === '/login') {
+        next(defaultRoute);
+        return;
+      }
+
+      if (!isRouteAllowed(to, roles)) {
+        next(defaultRoute);
+        return;
+      }
+
+      next();
+    } catch (error) {
+      store.commit('user/removeToken');
+      next('/login');
+      NProgress.done();
     }
   } else {
-    /* white list router */
     if (whiteListRouters.indexOf(to.path) !== -1) {
       next();
     } else {

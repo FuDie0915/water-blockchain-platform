@@ -7,6 +7,11 @@
     label-width="0"
     @submit="onSubmit"
   >
+    <div class="register-role-tip">
+      <span>当前注册角色</span>
+      <strong>{{ roleText }}</strong>
+    </div>
+
     <t-form-item name="userAccount">
       <t-input v-model="formData.userAccount" size="large" placeholder="请输入注册账号">
         <template #prefix-icon>
@@ -51,10 +56,10 @@
       </t-input>
     </t-form-item>
 
-    <div class="register-tip">注册后可直接使用该账号进入平台，默认密码以你当前填写为准。</div>
+    <div class="register-tip">{{ registerTip }}</div>
 
     <t-form-item>
-      <t-button block size="large" type="submit" theme="primary" :loading="submitting">注册</t-button>
+      <t-button block size="large" type="submit" theme="primary" :loading="submitting">注册{{ roleText }}</t-button>
     </t-form-item>
   </t-form>
 </template>
@@ -72,14 +77,12 @@ const INITIAL_DATA = {
 const FORM_RULES = {
   userAccount: [{ required: true, message: '请输入账号', type: 'error' }],
   password: [{ required: true, message: '请输入密码', type: 'error' }],
-  confirmPassword: [
-    { required: true, message: '请再次输入密码', type: 'error' },
-    {
-      validator: (val, rules, formData) => val === formData.password,
-      message: '两次输入的密码不一致',
-      type: 'error',
-    },
-  ],
+  confirmPassword: [{ required: true, message: '请再次输入密码', type: 'error' }],
+};
+
+const ROLE_TEXT_MAP = {
+  company: '养殖户端',
+  manager: '监管端',
 };
 
 export default Vue.extend({
@@ -90,6 +93,12 @@ export default Vue.extend({
     BrowseOffIcon,
     LockOnIcon,
   },
+  props: {
+    role: {
+      type: String,
+      default: 'company',
+    },
+  },
   data() {
     return {
       FORM_RULES,
@@ -99,18 +108,42 @@ export default Vue.extend({
       submitting: false,
     };
   },
+  computed: {
+    roleText() {
+      return ROLE_TEXT_MAP[this.role] || '当前角色';
+    },
+    registerTip() {
+      return this.role === 'manager'
+        ? '监管端账号注册成功后，可直接登录并进入监管控制台。'
+        : '养殖户账号注册成功后，可直接登录并进入养殖户控制台。';
+    },
+  },
   methods: {
     async onSubmit({ validateResult }: { validateResult: boolean }) {
       if (validateResult !== true) return;
 
+      if (this.formData.password !== this.formData.confirmPassword) {
+        this.$message.error('两次输入的密码不一致');
+        return;
+      }
+
       this.submitting = true;
       try {
-        await this.$store.dispatch('user/login', {
+        await this.$store.dispatch('user/register', {
           userAccount: this.formData.userAccount,
+          userPassword: this.formData.password,
+          roleType: this.role,
         });
+        localStorage.setItem('platformUserAccount', this.formData.userAccount);
         localStorage.setItem('platformUserPassword', this.formData.password);
-        this.$message.success('注册成功，请使用新账号登录');
-        this.$emit('register-success');
+        this.$message.success(`${this.roleText}注册成功，请登录`);
+        this.$emit('register-success', {
+          role: this.role,
+          userAccount: this.formData.userAccount,
+          userPassword: this.formData.password,
+        });
+      } catch (error) {
+        this.$message.error(error?.message || '注册失败，请稍后重试');
       } finally {
         this.submitting = false;
       }
@@ -120,6 +153,22 @@ export default Vue.extend({
 </script>
 
 <style scoped lang="less">
+.register-role-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(31, 116, 216, 0.08);
+  color: #1d4f79;
+
+  strong {
+    font-weight: 700;
+  }
+}
+
 .register-tip {
   margin: 6px 0 16px;
   font-size: 13px;

@@ -3,9 +3,9 @@
     <section class="marine-page__hero">
       <div class="ocean-card hero-panel">
         <div class="hero-badge">海水养殖 · 许可审批 · 数据上链</div>
-        <h1>水质监管工作台</h1>
+        <h1>平台总览</h1>
         <p>
-          面向养殖户申报、监管审批、数据审查与智能辅助场景，提供统一清晰的业务入口与操作视图。
+          聚合展示区块链运行态、业务概览与可信留痕信息，作为平台总览入口使用。
         </p>
       </div>
 
@@ -16,6 +16,12 @@
             <span>平台登录态</span>
             <t-tag :theme="authStatus.satoken ? 'success' : 'default'" variant="light-outline">
               {{ authStatus.satoken ? '已登录' : '未登录' }}
+            </t-tag>
+          </div>
+          <div class="auth-item">
+            <span>当前角色</span>
+            <t-tag :theme="authStatus.role ? 'primary' : 'default'" variant="light-outline">
+              {{ formatRole(authStatus.role) }}
             </t-tag>
           </div>
           <div class="auth-item">
@@ -35,7 +41,7 @@
     </section>
 
     <t-row :gutter="[16, 16]" class="role-row">
-      <t-col v-for="panel in rolePanels" :key="panel.title" :xs="12" :lg="6">
+      <t-col v-for="panel in rolePanels" :key="panel.title" :xs="12" :lg="4">
         <t-card :title="panel.title" :bordered="false" class="role-card">
           <div class="role-card__body">
             <div>
@@ -71,30 +77,42 @@ export default {
     return {
       authStatus: {
         satoken: false,
+        role: '',
         companytoken: false,
         managertoken: false,
       },
       rolePanels: [
         {
-          title: '养殖户工作台',
-          description: '用于提交许可证申请、上传材料并查看链上校验结果。',
-          path: '/water/enterprise-login',
-          buttonText: '进入养殖户端',
+          title: '平台总览',
+          description: '用于查看区块链浏览器、平台运行态与全局概览。',
+          path: '/dashboard/base',
+          buttonText: '进入总览页',
           features: [
-            '提交许可证申请',
-            '查看申请进度',
-            '执行链上核验',
+            '查看平台总览',
+            '浏览链上数据',
+            '查看全局态势',
           ],
         },
         {
-          title: '监管工作台',
-          description: '用于许可证审批、水数据分页查看与链上存证操作。',
-          path: '/water/monitor-login',
-          buttonText: '进入监管端',
+          title: '可信留痕',
+          description: '集中查看平台业务留痕、核心统计与链上核验结果。',
+          path: '/dashboard/base',
+          buttonText: '查看链上总览',
           features: [
-            '处理许可证审批',
-            '查看水质数据',
-            '执行批量上链',
+            '查看关键统计',
+            '浏览链上数据',
+            '核验业务留痕',
+          ],
+        },
+        {
+          title: '运行态总览',
+          description: '用于查看平台当前运行概况与核心业务状态。',
+          path: '/dashboard/base',
+          buttonText: '进入总览页',
+          features: [
+            '查看运行概况',
+            '浏览核心模块',
+            '掌握全局态势',
           ],
         },
       ],
@@ -129,9 +147,16 @@ export default {
     refreshAuthStatus() {
       this.authStatus = {
         satoken: !!localStorage.getItem('satoken'),
+        role: localStorage.getItem('platformUserRole') || '',
         companytoken: !!localStorage.getItem('companytoken'),
         managertoken: !!localStorage.getItem('managertoken'),
       };
+    },
+    formatRole(role) {
+      if (role === 'admin') return '平台总览';
+      if (role === 'manager') return '监管端';
+      if (role === 'company') return '养殖户端';
+      return '未识别';
     },
     go(path) {
       this.$router.push(path);

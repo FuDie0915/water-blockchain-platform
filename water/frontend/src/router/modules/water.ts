@@ -13,21 +13,21 @@ export default [
     children: [
       {
         path: 'index',
-        name: 'water',
+        name: 'water-index',
         component: () => import('@/pages/water/portal.vue'),
-        meta: { title: '水质监管工作台' },
+        meta: { title: '平台总览', roleCode: 'admin', allowedRoles: ['admin'] },
       },
       {
         path: 'enterprise-login',
         name: 'enterprise-login',
         component: () => import('@/pages/water/workbench.vue'),
-        meta: { title: '养殖户工作台' },
+        meta: { title: '养殖户工作台', roleCode: 'company', allowedRoles: ['company'] },
       },
       {
         path: 'monitor-login',
         name: 'monitor-login',
         component: () => import('@/pages/water/workbench.vue'),
-        meta: { title: '监管工作台' },
+        meta: { title: '监管工作台', roleCode: 'manager', allowedRoles: ['manager'] },
       },
     ],
   },

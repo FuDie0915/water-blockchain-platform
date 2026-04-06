@@ -167,6 +167,31 @@
   }
 }
 
+.role-switch {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 6px 0 4px;
+}
+
+.role-option {
+  border: 1px solid rgba(31, 116, 216, 0.18);
+  background: #f7fbff;
+  color: #35546f;
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+
+  &.active {
+    border-color: #1f74d8;
+    background: rgba(31, 116, 216, 0.10);
+    color: #1f74d8;
+    box-shadow: 0 10px 20px rgba(31, 116, 216, 0.10);
+  }
+}
+
 .item-container {
   width: 100%;
   max-width: 420px;

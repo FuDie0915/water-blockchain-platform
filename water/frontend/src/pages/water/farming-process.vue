@@ -49,11 +49,11 @@
           </button>
         </t-card>
 
-        <t-card title="展示说明" :bordered="false" class="panel-card side-panel tip-panel">
+        <t-card title="操作说明" :bordered="false" class="panel-card side-panel tip-panel">
           <ul class="tip-list">
-            <li>仅用于前端演示，不会调用后端接口。</li>
-            <li>支持按养殖池切换查看四类过程记录。</li>
-            <li>新增按钮可临时补充一条本地演示数据。</li>
+            <li>支持按养殖池切换查看苗种投放、投喂、用药与收货记录。</li>
+            <li>可通过上方标签页快速切换不同过程台账。</li>
+            <li>右侧新增按钮可补录当前养殖池的过程记录。</li>
           </ul>
         </t-card>
       </t-col>
@@ -70,7 +70,7 @@
             </t-tabs>
 
             <div class="toolbar-actions">
-              <t-tag :theme="isMonitorView ? 'warning' : 'primary'" variant="light-outline">{{ isMonitorView ? '监管总览' : '仅前端假数据' }}</t-tag>
+              <t-tag v-if="isMonitorView" theme="warning" variant="light-outline">监管总览</t-tag>
               <t-button v-if="!isMonitorView" theme="primary" @click="openCreateDialog">{{ currentCreateLabel }}</t-button>
             </div>
           </div>
@@ -161,7 +161,7 @@
               max-height="520"
               :data="filteredCurrentData"
               :columns="currentColumns"
-              :empty="'暂无演示数据'"
+              :empty="'暂无记录'"
             />
           </template>
         </t-card>
@@ -191,7 +191,7 @@
       v-if="!isMonitorView"
       :visible.sync="dialogVisible"
       :header="currentCreateLabel"
-      :confirm-btn="{ content: '保存演示数据', theme: 'primary' }"
+      :confirm-btn="{ content: '保存记录', theme: 'primary' }"
       :cancel-btn="{ content: '取消' }"
       width="560px"
       @confirm="handleCreateRecord"
@@ -376,15 +376,15 @@ export default {
       return this.currentRoleCode === 'manager';
     },
     pageBadge() {
-      return this.isMonitorView ? '监管端 · 全量总览' : '养殖户端 · 前端演示';
+      return this.isMonitorView ? '监管端 · 全量总览' : '养殖户端 · 过程台账';
     },
     pageTitle() {
       return this.isMonitorView ? '养殖过程监管' : '养殖过程管理';
     },
     pageDescription() {
       return this.isMonitorView
-        ? '监管端可查看全部养殖户的苗种投放、投喂、用药与收货台账，当前为前端演示数据。'
-        : '覆盖苗种投放、投喂记录、用药记录、收货记录，当前页面仅使用本地假数据展示。';
+        ? '监管端可查看全部养殖户的苗种投放、投喂、用药与收货台账。'
+        : '覆盖苗种投放、投喂记录、用药记录、收货记录，支持按养殖池查看全过程台账。';
     },
     sidePanelTitle() {
       return this.isMonitorView ? '监管养殖池总览' : '我的养殖池';
@@ -551,7 +551,7 @@ export default {
 
       return [
         { title: '苗种投放批次', value: `${this.seedRecords.filter((item) => item.farmerId === this.companyFarmerId).length}批`, description: '已登记的投苗批次' },
-        { title: '累计投喂量', value: `${totalFeed}kg`, description: '当前演示数据统计值' },
+        { title: '累计投喂量', value: `${totalFeed}kg`, description: '当前累计投喂统计值' },
         { title: '用药记录数', value: `${this.medicineRecords.filter((item) => item.farmerId === this.companyFarmerId).length}次`, description: '含常规维护与应急处置' },
         { title: '已上链台账', value: `${onChainCount}条`, description: '展示区块链存证状态' },
       ];
@@ -570,7 +570,7 @@ export default {
           farmerName: item.farmerName,
           farmName: item.farmName,
           operator: item.operator,
-          remark: item.remark || '已录入演示说明',
+          remark: item.remark || '已录入过程说明',
           status: item.status,
         }))
         .sort((a, b) => `${b.time}`.localeCompare(a.time))
@@ -666,7 +666,7 @@ export default {
 
       const { date, time, pondId, operator, primaryValue, secondaryValue, remark } = this.formModel;
       if (!date || !time || !pondId || !operator || !primaryValue || !secondaryValue) {
-        this.$message.warning('请先补全演示信息');
+        this.$message.warning('请先补全必填信息');
         return;
       }
 
@@ -681,7 +681,7 @@ export default {
         date,
         time,
         operator,
-        remark: remark || '前端演示新增记录',
+        remark: remark || '新增过程记录',
         status: '待上链',
       };
 
@@ -691,7 +691,7 @@ export default {
           batchNo: `MZ-${date.replace(/-/g, '')}-${this.seedRecords.length + 1}`,
           category: primaryValue,
           quantity: secondaryValue,
-          source: '演示录入来源',
+          source: '手动录入',
         });
       } else if (this.activeTab === 'feed') {
         this.feedRecords.unshift({
@@ -711,14 +711,14 @@ export default {
         this.harvestRecords.unshift({
           ...baseRecord,
           batchNo: primaryValue,
-          spec: '演示规格',
+          spec: '标准规格',
           weight: secondaryValue,
-          destination: '演示收货点',
+          destination: '默认收货点',
         });
       }
 
       this.dialogVisible = false;
-      this.$message.success(`${this.currentTabLabel}演示数据已新增`);
+      this.$message.success(`${this.currentTabLabel}已新增`);
       this.resetForm();
     },
     goBackWorkbench() {

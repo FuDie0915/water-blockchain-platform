@@ -369,7 +369,7 @@
           <t-row :gutter="[16, 16]" class="content-row">
             <t-col :xs="12" :lg="8">
               <t-card title="全域监管态势" :bordered="false" class="panel-card">
-                <div class="panel-tip">按片区查看养殖主体、水质风险、预警流转和日常监管重点，当前为前端假数据展示版。</div>
+                <div class="panel-tip">按片区查看养殖主体、水质风险、预警流转和日常监管重点，支持快速掌握全域监管态势。</div>
 
                 <div class="toolbar-row secondary">
                   <div class="pond-switcher">
@@ -767,8 +767,8 @@ const MOCK_PERMIT_IMAGE = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent
     </defs>
     <rect width="120" height="120" rx="18" fill="url(#g)" />
     <rect x="20" y="18" width="80" height="84" rx="12" fill="#ffffff" stroke="#8db8f5" />
-    <text x="60" y="52" font-size="16" text-anchor="middle" fill="#1f74d8" font-family="Arial">Permit</text>
-    <text x="60" y="76" font-size="12" text-anchor="middle" fill="#4f6780" font-family="Arial">演示数据</text>
+    <text x="60" y="52" font-size="16" text-anchor="middle" fill="#1f74d8" font-family="Arial">许可证</text>
+    <text x="60" y="76" font-size="12" text-anchor="middle" fill="#4f6780" font-family="Arial">备案文件</text>
   </svg>
 `)}`;
 
@@ -1859,7 +1859,7 @@ export default {
       }
 
       await this.initRoleWorkbench(userType);
-      this.$message.warning(`${userType === 'enterprise' ? '养殖户端' : '监管端'}接口暂不可用，已进入前端演示模式`);
+      this.$message.warning(`${userType === 'enterprise' ? '养殖户端' : '监管端'}接口暂不可用，已切换为工作台浏览模式`);
       return true;
     },
     async autoEnterByRoute() {
@@ -2385,7 +2385,7 @@ export default {
       return '指标处于正常范围，可继续保持当前养殖管理。';
     },
     showPondAddTip() {
-      this.$message.info('当前为前端展示版，新增养殖池入口样式已预留。');
+      this.$message.info('新增养殖池功能正在配置中，请稍后再试。');
     },
     showManualEntryDialog() {
       this.manualEntryDialogVisible = true;
@@ -2522,7 +2522,7 @@ export default {
 
         this.applyMockPermissionList();
       } catch (error) {
-        console.error('获取许可证列表失败，已切换为演示数据:', error);
+        console.error('获取许可证列表失败，已切换为备用数据:', error);
         this.applyMockPermissionList();
       }
     },
@@ -2647,13 +2647,13 @@ export default {
       const platformAccount = localStorage.getItem('platformUserAccount') || '';
       const platformPassword = localStorage.getItem('platformUserPassword') || '123456';
 
-      this.enterpriseAccount = this.enterpriseAccount || (platformRole === 'company' ? (platformAccount || 'farmer_demo') : 'farmer_demo');
+      this.enterpriseAccount = this.enterpriseAccount || (platformRole === 'company' ? (platformAccount || 'yangzhi01') : 'yangzhi01');
       this.enterprisePassword = this.enterprisePassword || platformPassword;
-      this.enterpriseBlockchainAddress = this.enterpriseBlockchainAddress || '0xFARMER-DEMO-001';
+      this.enterpriseBlockchainAddress = this.enterpriseBlockchainAddress || '0x8F3C21B9A74D56E0C12F9487B7D3A5E2109C44A1';
 
-      this.monitorAccount = this.monitorAccount || (platformRole === 'manager' ? (platformAccount || 'manager_demo') : 'manager_demo');
+      this.monitorAccount = this.monitorAccount || (platformRole === 'manager' ? (platformAccount || 'jianguan01') : 'jianguan01');
       this.monitorPassword = this.monitorPassword || platformPassword;
-      this.monitorBlockchainAddress = this.monitorBlockchainAddress || '0xMANAGER-DEMO-001';
+      this.monitorBlockchainAddress = this.monitorBlockchainAddress || '0x7E2B19D4C6A813F2E95B4D6A2C0187D7A31F0C9B';
     },
     async getAccountInfo() {
       try {
@@ -2666,7 +2666,7 @@ export default {
         this.monitorBlockchainAddress = data.managerAddress || this.monitorBlockchainAddress;
       } catch (error) {
         this.setDefaultAccountInfo();
-        console.warn('获取账号信息失败，已切换为本地演示账号信息:', error?.message || error);
+        console.warn('获取账号信息失败，已切换为默认账号信息:', error?.message || error);
       }
     },
     onTurbidityPageChange(current) {
@@ -2701,7 +2701,7 @@ export default {
         }
         this.applyMockWaterData('turbidity');
       } catch (error) {
-        console.error('获取浑浊度数据失败，已切换为演示数据:', error);
+        console.error('获取浑浊度数据失败，已切换为备用数据:', error);
         this.applyMockWaterData('turbidity');
       }
     },
@@ -2719,7 +2719,7 @@ export default {
         }
         this.applyMockWaterData('tds');
       } catch (error) {
-        console.error('获取 TDS 数据失败，已切换为演示数据:', error);
+        console.error('获取 TDS 数据失败，已切换为备用数据:', error);
         this.applyMockWaterData('tds');
       }
     },

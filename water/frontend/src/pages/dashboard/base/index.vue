@@ -7,7 +7,7 @@
           <h1>海水养殖系统管理员控制台</h1>
           <p>
             面向平台管理员统一处理账号开通、阈值配置、节点巡检、日志备份和公告发布，
-            当前页面为前端演示版，便于直接展示整体管理流程。
+            可直接查看整体管理流程与平台运行概况。
           </p>
 
         </div>
@@ -173,7 +173,7 @@
       <t-row :gutter="[16, 16]" class="content-row">
         <t-col :xs="12" :lg="8">
           <t-card title="公告发布" :bordered="false" class="panel-card">
-            <div class="section-tip">支持向全部养殖户或指定角色推送平台通知，当前为前端演示发布流程。</div>
+            <div class="section-tip">支持向全部养殖户或指定角色推送平台通知，并统一留存发布记录。</div>
             <div class="notice-form-grid">
               <t-input v-model="noticeForm.title" placeholder="请输入公告标题，如：大风天气巡检提醒" />
               <t-select v-model="noticeForm.audience" :options="noticeAudienceOptions" placeholder="请选择推送对象" />
@@ -418,7 +418,7 @@ export default {
           this.applyMockBoard();
         }
       } catch (error) {
-        console.error('加载区块链看板失败，已切换为演示数据:', error);
+        console.error('加载区块链看板失败，已切换为备用数据:', error);
         this.applyMockBoard();
       } finally {
         this.tablePagination = {

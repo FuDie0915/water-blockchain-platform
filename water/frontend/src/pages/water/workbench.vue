@@ -168,18 +168,12 @@
               <t-card title="许可证与链上存证记录" :bordered="false" class="panel-card">
                 <div class="panel-tip">展示许可证审批进度，并同步汇总最近业务留痕与链上核验状态。</div>
                 <div class="trace-list">
-                  <div v-for="item in filteredTraceabilityTimeline" :key="item.id" class="trace-item trace-item--with-qr">
+                  <div v-for="item in filteredTraceabilityTimeline" :key="item.id" class="trace-item">
                     <div class="trace-item__content">
                       <div class="ledger-item__title">{{ item.title }}</div>
                       <div class="warning-item__time">{{ item.pondName || activePondLabel }} · {{ item.time }} · {{ item.evidenceNo }}</div>
                     </div>
                     <div class="trace-item__aside">
-                      <t-image-viewer :images="[getTraceabilityQrImage(item)]">
-                        <template #trigger="{ open }">
-                          <img :src="getTraceabilityQrImage(item)" alt="溯源二维码" class="trace-item__qr trace-item__qr--clickable" @click="open" />
-                        </template>
-                      </t-image-viewer>
-                      <div class="trace-item__qr-text">点击查看</div>
                       <t-tag :theme="item.onChain ? 'success' : 'warning'" variant="light-outline">
                         {{ item.onChain ? '已上链' : '待上链' }}
                       </t-tag>
@@ -271,7 +265,7 @@
                     <div class="trend-summary-item">
                       <div class="summary-card__label">已同步存证</div>
                       <div class="summary-card__value small">{{ monitorPeriodSummary.onChain }}</div>
-                      <div class="summary-card__desc">支持后续二维码核验</div>
+                      <div class="summary-card__desc">支持后续链上核验</div>
                     </div>
                   </div>
 
@@ -320,14 +314,6 @@
                           <div class="warning-item__time">{{ item.pondName || activePondLabel }} · {{ item.time }}</div>
                           <div class="traceability-record-card__meta">{{ item.evidenceNo }}</div>
                           <div class="traceability-record-card__hash">{{ getChainHashSummary(item) }}</div>
-                          <div class="traceability-record-card__qr-box">
-                            <t-image-viewer :images="[getTraceabilityQrImage(item)]">
-                              <template #trigger="{ open }">
-                                <img :src="getTraceabilityQrImage(item)" alt="溯源二维码" class="traceability-record-card__qr traceability-record-card__qr--clickable" @click.stop="open" />
-                              </template>
-                            </t-image-viewer>
-                            <span>点击放大查看溯源码</span>
-                          </div>
                         </button>
                       </div>
                     </div>
@@ -366,17 +352,6 @@
                         </div>
                       </div>
 
-                      <div class="certificate-scan-panel">
-                        <div class="certificate-scan-panel__text">
-                          <div class="certificate-scan-panel__title">扫码查看溯源详情</div>
-                          <div class="certificate-scan-panel__desc">当前为前端演示二维码，可模拟扫码进入链上证书详情页。</div>
-                        </div>
-                        <t-image-viewer :images="[getTraceabilityQrImage(currentTraceabilityCertificate)]">
-                          <template #trigger="{ open }">
-                            <img :src="getTraceabilityQrImage(currentTraceabilityCertificate)" alt="溯源二维码" class="certificate-scan-panel__qr certificate-scan-panel__qr--clickable" @click="open" />
-                          </template>
-                        </t-image-viewer>
-                      </div>
 
                       <div :class="['certificate-verify-bar', { pending: !currentTraceabilityCertificate.onChain }]">
                         <span class="certificate-verify-bar__icon">{{ currentTraceabilityCertificate.onChain ? '✔' : '…' }}</span>
@@ -796,11 +771,6 @@ const MOCK_PERMIT_IMAGE = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent
     <text x="60" y="76" font-size="12" text-anchor="middle" fill="#4f6780" font-family="Arial">演示数据</text>
   </svg>
 `)}`;
-
-const TRACEABILITY_QR_IMAGES = [
-  new URL('../../../res/cod1.png', import.meta.url).href,
-  new URL('../../../res/cod2.png', import.meta.url).href,
-];
 
 export default {
   name: 'WaterWorkbench',
@@ -2049,10 +2019,6 @@ export default {
       }
       return `0x${hash.toString(16).padStart(8, '0')}...`;
     },
-    getTraceabilityQrImage(item, index = 0) {
-      const seed = Number(item?.id) || index || 0;
-      return TRACEABILITY_QR_IMAGES[Math.abs(seed) % TRACEABILITY_QR_IMAGES.length];
-    },
     switchFarmerView(view) {
       this.farmerView = view;
       this.$nextTick(() => {
@@ -3082,27 +3048,6 @@ export default {
   flex-wrap: nowrap;
 }
 
-.trace-item__qr {
-  width: 56px;
-  height: 56px;
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid rgba(31, 116, 216, 0.18);
-  background: #fff;
-  object-fit: cover;
-  box-shadow: 0 8px 16px rgba(31, 116, 216, 0.08);
-}
-
-.trace-item__qr--clickable {
-  cursor: zoom-in;
-}
-
-.trace-item__qr-text {
-  font-size: 12px;
-  color: #6a7f95;
-  white-space: nowrap;
-}
-
 
 .traceability-layout {
   display: grid;
@@ -3165,28 +3110,6 @@ export default {
     color: #1d4f79;
   }
 
-  &__qr-box {
-    margin-top: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: #5f738a;
-  }
-
-  &__qr {
-    width: 52px;
-    height: 52px;
-    padding: 4px;
-    border-radius: 10px;
-    border: 1px solid rgba(31, 116, 216, 0.18);
-    background: #fff;
-    object-fit: cover;
-  }
-
-  &__qr--clickable {
-    cursor: zoom-in;
-  }
 }
 
 .traceability-certificate-panel {
@@ -3264,45 +3187,6 @@ export default {
   }
 }
 
-.certificate-scan-panel {
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px dashed rgba(31, 116, 216, 0.24);
-  background: rgba(239, 247, 255, 0.6);
-}
-
-.certificate-scan-panel__title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #12314d;
-}
-
-.certificate-scan-panel__desc {
-  margin-top: 4px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #6a7f95;
-}
-
-.certificate-scan-panel__qr {
-  width: 88px;
-  height: 88px;
-  padding: 6px;
-  border-radius: 14px;
-  border: 1px solid rgba(31, 116, 216, 0.18);
-  background: #fff;
-  object-fit: cover;
-  box-shadow: 0 10px 22px rgba(31, 116, 216, 0.08);
-}
-
-.certificate-scan-panel__qr--clickable {
-  cursor: zoom-in;
-}
 
 .certificate-verify-bar {
   margin-top: 16px;

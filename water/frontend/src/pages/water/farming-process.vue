@@ -129,17 +129,7 @@
                 </div>
               </div>
 
-              <div class="traceability-scan-card">
-                <div>
-                  <div class="traceability-scan-card__title">扫码查看当前养殖池溯源档案</div>
-                  <div class="traceability-scan-card__desc">当前为前端演示二维码，可模拟扫码核验养殖全过程信息。</div>
-                </div>
-                <t-image-viewer :images="[activeTraceabilityProfile.qrImage]">
-                  <template #trigger="{ open }">
-                    <img :src="activeTraceabilityProfile.qrImage" alt="溯源二维码" class="traceability-scan-card__qr traceability-scan-card__qr--clickable" @click="open" />
-                  </template>
-                </t-image-viewer>
-              </div>
+
             </div>
           </template>
 
@@ -182,19 +172,13 @@
       <t-col :xs="12" :lg="12">
         <t-card title="最近存证动态" :bordered="false" class="panel-card">
           <div class="trace-list">
-            <div v-for="item in latestTimeline" :key="item.id" class="trace-item trace-item--with-qr">
+            <div v-for="item in latestTimeline" :key="item.id" class="trace-item">
               <div class="trace-item__content">
                 <div class="trace-item__title">{{ item.title }}</div>
                 <div class="trace-item__meta">{{ isMonitorView ? `${item.farmerName} · ${item.farmName} · ` : '' }}{{ item.pondName }} · {{ item.time }} · {{ item.operator }}</div>
                 <div class="trace-item__desc">{{ item.remark }}</div>
               </div>
               <div class="trace-item__aside">
-                <t-image-viewer :images="[item.qrImage]">
-                  <template #trigger="{ open }">
-                    <img :src="item.qrImage" alt="溯源二维码" class="trace-item__qr trace-item__qr--clickable" @click="open" />
-                  </template>
-                </t-image-viewer>
-                <div class="trace-item__qr-text">点击查看</div>
                 <t-tag :theme="resolveStatusTheme(item.status)" variant="light-outline">{{ item.status }}</t-tag>
               </div>
             </div>
@@ -265,11 +249,6 @@ const STATUS_THEME_MAP = {
   正常: 'success',
   关注: 'warning',
 };
-
-const TRACEABILITY_QR_IMAGES = [
-  new URL('../../../res/cod1.png', import.meta.url).href,
-  new URL('../../../res/cod2.png', import.meta.url).href,
-];
 
 const MONITOR_EXTRA_COLUMNS = [
   { colKey: 'farmerName', title: '养殖户', minWidth: 120 },
@@ -527,7 +506,6 @@ export default {
         feedCount: `${this.scopedFeedRecords.length}次`,
         chainText: allOnChain ? '完整' : '待补充',
         chainTheme: allOnChain ? 'success' : 'warning',
-        qrImage: this.getTraceabilityQrImage({ id: pondInfo.value || this.selectedPond || 'trace-profile' }),
       };
     },
     monitorTraceabilityStages() {
@@ -594,7 +572,6 @@ export default {
           operator: item.operator,
           remark: item.remark || '已录入演示说明',
           status: item.status,
-          qrImage: this.getTraceabilityQrImage(item),
         }))
         .sort((a, b) => `${b.time}`.localeCompare(a.time))
         .slice(0, 6);
@@ -645,14 +622,6 @@ export default {
     },
     resolveStatusTheme(status) {
       return STATUS_THEME_MAP[status] || 'primary';
-    },
-    getTraceabilityQrImage(item, index = 0) {
-      const seed = String(item?.id || item?.pondId || index || '0');
-      let hash = 0;
-      for (let i = 0; i < seed.length; i += 1) {
-        hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-      }
-      return TRACEABILITY_QR_IMAGES[hash % TRACEABILITY_QR_IMAGES.length];
     },
     showAllFarmers() {
       this.selectedFarmer = 'all';
@@ -949,27 +918,6 @@ export default {
   gap: 10px;
 }
 
-.trace-item__qr {
-  width: 56px;
-  height: 56px;
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid rgba(31, 116, 216, 0.16);
-  background: #fff;
-  object-fit: cover;
-  box-shadow: 0 8px 16px rgba(31, 116, 216, 0.08);
-}
-
-.trace-item__qr--clickable {
-  cursor: zoom-in;
-}
-
-.trace-item__qr-text {
-  font-size: 12px;
-  color: #6b7785;
-  white-space: nowrap;
-}
-
 .trace-item__title {
   font-size: 15px;
   font-weight: 600;
@@ -1097,45 +1045,6 @@ export default {
   color: #6b7785;
 }
 
-.traceability-scan-card {
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px dashed #b8d4fb;
-  background: linear-gradient(135deg, #eef6ff 0%, #ffffff 100%);
-}
-
-.traceability-scan-card__title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1f2d3d;
-}
-
-.traceability-scan-card__desc {
-  margin-top: 4px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #6b7785;
-}
-
-.traceability-scan-card__qr {
-  width: 88px;
-  height: 88px;
-  padding: 6px;
-  border-radius: 14px;
-  border: 1px solid rgba(31, 116, 216, 0.16);
-  background: #fff;
-  object-fit: cover;
-  box-shadow: 0 10px 20px rgba(31, 116, 216, 0.08);
-}
-
-.traceability-scan-card__qr--clickable {
-  cursor: zoom-in;
-}
 
 @media (max-width: 768px) {
   .farming-process-page {

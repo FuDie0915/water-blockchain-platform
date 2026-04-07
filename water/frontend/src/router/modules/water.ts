@@ -1,5 +1,6 @@
 import { ViewModuleIcon } from 'tdesign-icons-vue';
 import Layout from '@/layouts/index.vue';
+import FarmingProcess from '@/pages/water/farming-process.vue';
 
 export default [
   {
@@ -22,6 +23,12 @@ export default [
         name: 'enterprise-login',
         component: () => import('@/pages/water/workbench.vue'),
         meta: { title: '养殖户工作台', roleCode: 'company', allowedRoles: ['company'] },
+      },
+      {
+        path: 'breeding',
+        name: 'farmer-breeding',
+        component: FarmingProcess,
+        meta: { title: '养殖过程管理', roleCode: 'company', allowedRoles: ['company', 'manager'] },
       },
       {
         path: 'monitor-login',

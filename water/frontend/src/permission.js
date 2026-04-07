@@ -60,8 +60,12 @@ router.beforeEach(async (to, from, next) => {
 
       if (!roles.length) {
         await store.dispatch('user/getUserInfo');
-        await store.dispatch('permission/initRoutes', store.getters['user/roles']);
         roles = normalizeRoles(store.getters['user/roles']);
+      }
+
+      const permissionRouters = store.getters['permission/routers'] || [];
+      if (roles.length && (!Array.isArray(permissionRouters) || permissionRouters.length === 0)) {
+        await store.dispatch('permission/initRoutes', roles);
       }
 
       clearInvalidRoleTokens(roles);

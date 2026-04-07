@@ -11,13 +11,13 @@
 }
 
 .login-shell {
-  max-width: 1280px;
+  max-width: 1120px;
   margin: 0 auto;
-  min-height: calc(100vh - 90px);
+  min-height: calc(100vh - 110px);
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 24px;
-  align-items: stretch;
+  grid-template-columns: minmax(320px, 0.78fr) minmax(420px, 0.92fr);
+  gap: 20px;
+  align-items: center;
 }
 
 .brand-panel,
@@ -29,7 +29,9 @@
 .brand-panel {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  align-self: center;
+  gap: 10px;
   color: #15324e;
   position: relative;
   overflow: hidden;
@@ -84,45 +86,82 @@
   color: #1d4f79;
 }
 
-.brand-intro {
-  margin-top: 20px;
-  padding: 14px 16px;
-  border-radius: 16px;
+.brand-note {
+  margin: 0;
   font-size: 15px;
   line-height: 1.8;
   color: #4f6780;
-  background: rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(31, 116, 216, 0.14);
 }
 
-.feature-list {
-  display: grid;
-  gap: 14px;
-  margin-top: 28px;
+.brand-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
 }
 
-.feature-item {
+.brand-point {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d4f79;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(31, 116, 216, 0.16);
+}
+
+.quick-guide {
   display: grid;
-  gap: 6px;
-  padding: 16px 18px;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.quick-guide__item {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 14px 16px;
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(244, 249, 255, 0.88) 100%);
   border: 1px solid rgba(31, 116, 216, 0.16);
   box-shadow: 0 10px 24px rgba(31, 116, 216, 0.06);
 
   strong {
+    display: block;
     font-size: 16px;
     color: #12314d;
+    margin-bottom: 4px;
   }
 
-  span {
+  p {
+    margin: 0;
     font-size: 14px;
     color: #5e738a;
     line-height: 1.7;
   }
 }
 
+.quick-guide__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f74d8;
+  background: rgba(31, 116, 216, 0.10);
+}
+
 .form-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-self: center;
+  width: 100%;
+  min-height: 560px;
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 16px 40px rgba(20, 85, 155, 0.12);
 }
@@ -137,13 +176,18 @@
 
   p {
     margin: 0;
+    max-width: 440px;
     color: #5e738a;
     font-size: 14px;
+    line-height: 1.7;
   }
 }
 
 .switch-tabs {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  max-width: 360px;
   margin: 24px 0 12px;
   padding: 4px;
   gap: 4px;
@@ -157,6 +201,7 @@
   padding: 10px 18px;
   border-radius: 999px;
   color: #4f6780;
+  text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
 
@@ -169,7 +214,7 @@
 
 .role-switch {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin: 6px 0 4px;
 }
@@ -192,9 +237,27 @@
   }
 }
 
+.role-option--admin {
+  border-color: rgba(18, 49, 77, 0.18);
+  background: linear-gradient(180deg, #f5f8fc 0%, #edf4fb 100%);
+
+  &.active {
+    border-color: #12314d;
+    background: linear-gradient(180deg, rgba(18, 49, 77, 0.10) 0%, rgba(31, 116, 216, 0.14) 100%);
+    color: #12314d;
+  }
+}
+
+.role-switch__hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6a7f95;
+  line-height: 1.6;
+}
+
 .item-container {
   width: 100%;
-  max-width: 420px;
+  max-width: 100%;
   margin-top: 18px;
 }
 
@@ -220,11 +283,29 @@
     padding: 22px;
   }
 
+  .form-panel {
+    min-height: auto;
+  }
+
   .brand-title {
     font-size: 30px;
   }
 
   .brand-subtitle {
     font-size: 18px;
+  }
+
+  .role-switch {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .switch-tabs {
+    max-width: 100%;
+  }
+
+  .quick-guide__item {
+    grid-template-columns: 1fr;
   }
 }

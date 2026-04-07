@@ -9,12 +9,17 @@
             <p>{{ roleSubtitle }}</p>
 
             <div class="hero-actions">
-              <t-button v-if="userType === 'enterprise'" theme="primary" :disabled="hasActivePermit" @click="showApplyDialog">
-                提交许可证
-              </t-button>
+              <template v-if="userType === 'enterprise'">
+                <t-button theme="primary" :disabled="hasActivePermit" @click="showApplyDialog">提交许可证</t-button>
+                <t-button :theme="farmerView === 'monitor' ? 'primary' : 'default'" :variant="farmerView === 'monitor' ? 'base' : 'outline'" @click="switchFarmerView('monitor')">水质监测</t-button>
+                <t-button :theme="farmerView === 'warning' ? 'warning' : 'default'" :variant="farmerView === 'warning' ? 'base' : 'outline'" @click="switchFarmerView('warning')">预警中心</t-button>
+                <t-button variant="outline" :loading="farmingProcessLoading" @click="openFarmingProcess">养殖过程管理</t-button>
+              </template>
               <template v-else>
-                <t-button theme="primary" @click="currentView = 'approval'">许可审批</t-button>
-                <t-button variant="outline" @click="currentView = 'waterData'">水数据审查</t-button>
+                <t-button :theme="currentView === 'dashboard' ? 'primary' : 'default'" :variant="currentView === 'dashboard' ? 'base' : 'outline'" @click="switchRegulatorView('dashboard')">监管总览</t-button>
+                <t-button :theme="currentView === 'approval' ? 'primary' : 'default'" :variant="currentView === 'approval' ? 'base' : 'outline'" @click="switchRegulatorView('approval')">许可审批</t-button>
+                <t-button :theme="currentView === 'waterData' ? 'primary' : 'default'" :variant="currentView === 'waterData' ? 'base' : 'outline'" @click="switchRegulatorView('waterData')">水数据审查</t-button>
+                <t-button variant="outline" :loading="farmingProcessLoading" @click="openFarmingProcess">养殖过程监管</t-button>
                 <t-button variant="outline" @click="showContractDialog">绑定智能合约</t-button>
               </template>
               <t-button variant="text" @click="logout">退出登录</t-button>
@@ -59,12 +64,87 @@
 
         <template v-if="userType === 'enterprise'">
           <t-row :gutter="[16, 16]" class="content-row">
+            <t-col :xs="12" :lg="8">
+              <t-card title="养殖户驾驶舱" :bordered="false" class="panel-card">
+                <div class="panel-tip">围绕参考阈值展示当前关键水质、预警待办、全过程台账与区块链留痕进度。</div>
+                <div class="pond-switcher">
+                  <span class="pond-switcher__label">当前养殖池：</span>
+                  <t-button
+                    v-for="pond in pondOptions"
+                    :key="pond.value"
+                    size="small"
+                    :theme="activePondId === pond.value ? 'primary' : 'default'"
+                    :variant="activePondId === pond.value ? 'base' : 'outline'"
+                    @click="activePondId = pond.value"
+                  >
+                    {{ pond.label }}
+                  </t-button>
+                  <button class="pond-add-button" type="button" @click="showPondAddTip">
+                    <span class="pond-add-button__icon">+</span>
+                    <span>新增养殖池</span>
+                  </button>
+                </div>
+                <div class="metric-grid">
+                  <div v-for="item in farmerMetricCards" :key="item.metricCode" class="metric-card-mini">
+                    <div class="metric-card-mini__top">
+                      <span>{{ item.label }}</span>
+                      <t-tag :theme="item.theme" variant="light">{{ item.levelText }}</t-tag>
+                    </div>
+                    <div class="metric-card-mini__value">
+                      {{ item.value }}
+                      <small>{{ item.unit }}</small>
+                    </div>
+                    <div class="metric-card-mini__meta">{{ activePondLabel }} · 正常范围：{{ item.normalText }}{{ item.unit }}</div>
+                    <div class="metric-card-mini__desc">{{ item.tip }}</div>
+                  </div>
+                </div>
+
+                <div class="farmer-section-grid">
+                  <div class="farmer-subpanel">
+                    <div class="farmer-subpanel__title">预警待办</div>
+                    <div v-for="item in filteredWarningList" :key="item.id" class="warning-item">
+                      <div class="warning-item__head">
+                        <span>{{ item.title }}</span>
+                        <t-tag :theme="item.theme" variant="light-outline">{{ item.levelText }}</t-tag>
+                      </div>
+                      <div class="warning-item__time">{{ formatWarningType(item.type) }} · {{ item.time }}</div>
+                      <div class="warning-item__desc">{{ item.detail }}</div>
+                    </div>
+                  </div>
+
+                  <div class="farmer-subpanel">
+                    <div class="farmer-subpanel__title">全过程台账</div>
+                    <div v-for="item in filteredLedgerItems" :key="item.id" class="ledger-item">
+                      <div class="ledger-item__title">{{ item.title }}</div>
+                      <div class="warning-item__time">{{ item.pondName || activePondLabel }} · {{ item.time }} · {{ item.status }}</div>
+                      <div class="warning-item__desc">{{ item.detail }}</div>
+                    </div>
+                  </div>
+                </div>
+              </t-card>
+            </t-col>
+
+            <t-col :xs="12" :lg="4">
+              <t-card title="阈值标准对照" :bordered="false" class="panel-card info-panel">
+                <div class="threshold-list">
+                  <div v-for="item in primaryThresholdRules" :key="item.metricCode" class="threshold-item">
+                    <div class="threshold-item__title">{{ item.label }}</div>
+                    <div class="threshold-item__range">正常：{{ item.normalText }}{{ item.unit }}</div>
+                    <div class="threshold-item__range">预警：{{ item.warningText }}{{ item.unit }}</div>
+                    <div class="threshold-item__range danger">危险：{{ item.dangerText }}{{ item.unit }}</div>
+                  </div>
+                </div>
+              </t-card>
+            </t-col>
+          </t-row>
+
+          <t-row :gutter="[16, 16]" class="content-row">
             <t-col :xs="12" :lg="4">
               <t-card title="养殖户操作说明" :bordered="false" class="panel-card info-panel">
                 <ul class="guide-list">
                   <li>使用当前平台账号自动进入养殖户工作台，无需再次输入账号密码。</li>
-                  <li>提交排污许可证后，监管端可直接审核并执行链上核验。</li>
-                  <li>若当前存在待审批或已通过许可证，将暂时禁止重复提交。</li>
+                  <li>实时查看水温、盐度、pH、溶解氧、氨氮、亚硝酸盐状态。</li>
+                  <li>提交许可证、记录养殖全过程后，可在当前页面持续查看链上留痕状态。</li>
                 </ul>
 
                 <div class="account-box">
@@ -85,16 +165,226 @@
             </t-col>
 
             <t-col :xs="12" :lg="8">
-              <t-card title="许可证记录" :bordered="false" class="panel-card">
-                <div class="panel-tip">展示养殖户已提交的许可证状态与链上比对能力。</div>
+              <t-card title="许可证与链上存证记录" :bordered="false" class="panel-card">
+                <div class="panel-tip">展示许可证审批进度，并同步汇总最近业务留痕与链上核验状态。</div>
+                <div class="trace-list">
+                  <div v-for="item in filteredTraceabilityTimeline" :key="item.id" class="trace-item trace-item--with-qr">
+                    <div class="trace-item__content">
+                      <div class="ledger-item__title">{{ item.title }}</div>
+                      <div class="warning-item__time">{{ item.pondName || activePondLabel }} · {{ item.time }} · {{ item.evidenceNo }}</div>
+                    </div>
+                    <div class="trace-item__aside">
+                      <t-image-viewer :images="[getTraceabilityQrImage(item)]">
+                        <template #trigger="{ open }">
+                          <img :src="getTraceabilityQrImage(item)" alt="溯源二维码" class="trace-item__qr trace-item__qr--clickable" @click="open" />
+                        </template>
+                      </t-image-viewer>
+                      <div class="trace-item__qr-text">点击查看</div>
+                      <t-tag :theme="item.onChain ? 'success' : 'warning'" variant="light-outline">
+                        {{ item.onChain ? '已上链' : '待上链' }}
+                      </t-tag>
+                    </div>
+                  </div>
+                </div>
                 <t-table
                   row-key="id"
                   :data="enterpriseTableData"
                   :columns="enterpriseColumns"
                   bordered
-                  max-height="520"
+                  max-height="420"
                   :empty="'暂无许可证记录'"
                 />
+              </t-card>
+            </t-col>
+          </t-row>
+
+          <t-row :gutter="[16, 16]" class="content-row">
+            <t-col :xs="12" :lg="12">
+              <t-card :bordered="false" class="panel-card recent-chain-panel">
+                <div class="chain-panel-header">
+                  <div>
+                    <div class="ledger-item__title">最近操作上链记录</div>
+                    <div class="panel-tip compact">按当前养殖池汇总最近业务留痕、上链状态与区块哈希摘要。</div>
+                  </div>
+                  <t-button theme="primary" variant="text" @click="openFarmerTraceability">查看全部</t-button>
+                </div>
+                <t-table
+                  row-key="id"
+                  :data="recentChainRecords"
+                  :columns="farmerChainColumns"
+                  bordered
+                  size="small"
+                  max-height="320"
+                  :empty="'暂无最近上链记录'"
+                />
+              </t-card>
+            </t-col>
+          </t-row>
+
+          <t-row :gutter="[16, 16]" class="content-row">
+            <t-col :xs="12" :lg="12">
+              <t-card ref="farmerCenterCard" title="水质监测 / 预警中心 / 存证查询" :bordered="false" class="panel-card">
+                <div class="toolbar-row monitor-toolbar">
+                  <t-tabs :value="farmerView" @change="handleFarmerTabChange">
+                    <t-tab-panel value="monitor" label="水质监测" />
+                    <t-tab-panel value="warning" label="预警中心" />
+                    <t-tab-panel value="traceability" label="存证查询" />
+                  </t-tabs>
+
+                  <div class="toolbar-actions" v-if="farmerView === 'monitor'">
+                    <t-button size="small" :variant="trendRange === '24h' ? 'base' : 'outline'" @click="trendRange = '24h'">24小时</t-button>
+                    <t-button size="small" :variant="trendRange === '7d' ? 'base' : 'outline'" @click="trendRange = '7d'">7天</t-button>
+                    <t-button size="small" :variant="trendRange === '30d' ? 'base' : 'outline'" @click="trendRange = '30d'">30天</t-button>
+                    <t-button theme="primary" variant="outline" @click="showManualEntryDialog">手动补录</t-button>
+                  </div>
+                </div>
+
+                <template v-if="farmerView === 'monitor'">
+                  <div class="monitor-chart-panel">
+                    <div class="monitor-chart-panel__header">
+                      <div>
+                        <div class="ledger-item__title">水质趋势折线图</div>
+                        <div class="warning-item__time">展示溶解氧与 pH 在 {{ monitorPeriodSummary.label }} 内的动态变化</div>
+                      </div>
+                      <t-tag theme="primary" variant="light-outline">动态趋势</t-tag>
+                    </div>
+                    <div class="monitor-chart-legend-tip">当前展示：溶解氧与 pH 双轴对比趋势</div>
+                    <div ref="waterTrendChartRef" class="water-trend-chart"></div>
+                  </div>
+
+                  <div class="trend-summary-grid">
+                    <div class="trend-summary-item">
+                      <div class="summary-card__label">统计范围</div>
+                      <div class="summary-card__value small">{{ monitorPeriodSummary.label }}</div>
+                      <div class="summary-card__desc">{{ monitorPeriodSummary.tip }}</div>
+                    </div>
+                    <div class="trend-summary-item">
+                      <div class="summary-card__label">采样次数</div>
+                      <div class="summary-card__value small">{{ monitorPeriodSummary.samples }}</div>
+                      <div class="summary-card__desc">自动采集 + 手动补录</div>
+                    </div>
+                    <div class="trend-summary-item">
+                      <div class="summary-card__label">异常记录</div>
+                      <div class="summary-card__value small">{{ monitorPeriodSummary.abnormal }}</div>
+                      <div class="summary-card__desc">超过阈值范围的重点数据</div>
+                    </div>
+                    <div class="trend-summary-item">
+                      <div class="summary-card__label">已同步存证</div>
+                      <div class="summary-card__value small">{{ monitorPeriodSummary.onChain }}</div>
+                      <div class="summary-card__desc">支持后续二维码核验</div>
+                    </div>
+                  </div>
+
+                  <t-table
+                    row-key="id"
+                    :data="displayMonitorRecords"
+                    :columns="farmerMonitorColumns"
+                    bordered
+                    max-height="420"
+                    :empty="'暂无监测记录'"
+                  />
+                </template>
+
+                <template v-else-if="farmerView === 'warning'">
+                  <div class="warning-center-grid">
+                    <div v-for="item in filteredWarningList" :key="`center-${item.id}`" class="warning-center-card">
+                      <div class="warning-item__head">
+                        <span>{{ item.title }}</span>
+                        <t-tag :theme="item.theme" variant="light">{{ item.levelText }}</t-tag>
+                      </div>
+                      <div class="warning-item__time">{{ formatWarningType(item.type) }} · {{ item.time }}</div>
+                      <div class="warning-item__desc">{{ item.detail }}</div>
+                    </div>
+                  </div>
+                </template>
+
+                <template v-else>
+                  <div class="traceability-layout">
+                    <div class="traceability-records-panel">
+                      <div class="farmer-subpanel__title">存证记录</div>
+                      <div class="warning-item__time">点击左侧记录，可查看对应的区块链存证证书详情。</div>
+                      <div class="traceability-record-list">
+                        <button
+                          v-for="item in filteredTraceabilityTimeline"
+                          :key="`detail-${item.id}`"
+                          type="button"
+                          :class="['traceability-record-card', { active: currentTraceabilityCertificate && currentTraceabilityCertificate.id === item.id }]"
+                          @click="selectedTraceabilityId = item.id"
+                        >
+                          <div class="traceability-record-card__head">
+                            <span>{{ item.title }}</span>
+                            <t-tag :theme="item.onChain ? 'success' : 'warning'" variant="light-outline">
+                              {{ item.onChain ? '已上链' : '待上链' }}
+                            </t-tag>
+                          </div>
+                          <div class="warning-item__time">{{ item.pondName || activePondLabel }} · {{ item.time }}</div>
+                          <div class="traceability-record-card__meta">{{ item.evidenceNo }}</div>
+                          <div class="traceability-record-card__hash">{{ getChainHashSummary(item) }}</div>
+                          <div class="traceability-record-card__qr-box">
+                            <t-image-viewer :images="[getTraceabilityQrImage(item)]">
+                              <template #trigger="{ open }">
+                                <img :src="getTraceabilityQrImage(item)" alt="溯源二维码" class="traceability-record-card__qr traceability-record-card__qr--clickable" @click.stop="open" />
+                              </template>
+                            </t-image-viewer>
+                            <span>点击放大查看溯源码</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div v-if="currentTraceabilityCertificate" class="traceability-certificate-panel">
+                      <div class="certificate-head">
+                        <div class="certificate-emblem">✦</div>
+                        <div class="certificate-title">区块链数据存证证书</div>
+                        <div class="certificate-subtitle">{{ currentTraceabilityCertificate.evidenceNo }}</div>
+                      </div>
+
+                      <div class="certificate-sheet">
+                        <div class="certificate-row">
+                          <div class="certificate-label">养殖户</div>
+                          <div class="certificate-value">{{ currentTraceabilityCertificate.ownerName || '李大海' }}</div>
+                        </div>
+                        <div class="certificate-row">
+                          <div class="certificate-label">存证内容</div>
+                          <div class="certificate-value">{{ currentTraceabilityCertificate.contentTitle || currentTraceabilityCertificate.title }}</div>
+                        </div>
+                        <div class="certificate-row">
+                          <div class="certificate-label">上链时间</div>
+                          <div class="certificate-value">{{ currentTraceabilityCertificate.chainTime || currentTraceabilityCertificate.time }}</div>
+                        </div>
+                        <div class="certificate-row">
+                          <div class="certificate-label">区块哈希</div>
+                          <div class="certificate-value hash">{{ currentTraceabilityCertificate.hash || getChainHashSummary(currentTraceabilityCertificate) }}</div>
+                        </div>
+                        <div class="certificate-row">
+                          <div class="certificate-label">区块高度</div>
+                          <div class="certificate-value">{{ currentTraceabilityCertificate.blockHeight || '--' }}</div>
+                        </div>
+                        <div class="certificate-row">
+                          <div class="certificate-label">说明</div>
+                          <div class="certificate-value">{{ currentTraceabilityCertificate.description }}</div>
+                        </div>
+                      </div>
+
+                      <div class="certificate-scan-panel">
+                        <div class="certificate-scan-panel__text">
+                          <div class="certificate-scan-panel__title">扫码查看溯源详情</div>
+                          <div class="certificate-scan-panel__desc">当前为前端演示二维码，可模拟扫码进入链上证书详情页。</div>
+                        </div>
+                        <t-image-viewer :images="[getTraceabilityQrImage(currentTraceabilityCertificate)]">
+                          <template #trigger="{ open }">
+                            <img :src="getTraceabilityQrImage(currentTraceabilityCertificate)" alt="溯源二维码" class="certificate-scan-panel__qr certificate-scan-panel__qr--clickable" @click="open" />
+                          </template>
+                        </t-image-viewer>
+                      </div>
+
+                      <div :class="['certificate-verify-bar', { pending: !currentTraceabilityCertificate.onChain }]">
+                        <span class="certificate-verify-bar__icon">{{ currentTraceabilityCertificate.onChain ? '✔' : '…' }}</span>
+                        <span>{{ currentTraceabilityCertificate.verifyText }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
               </t-card>
             </t-col>
           </t-row>
@@ -103,24 +393,165 @@
         <template v-else>
           <t-row :gutter="[16, 16]" class="content-row">
             <t-col :xs="12" :lg="8">
-              <t-card title="监管工作台" :bordered="false" class="panel-card">
+              <t-card title="全域监管态势" :bordered="false" class="panel-card">
+                <div class="panel-tip">按片区查看养殖主体、水质风险、预警流转和日常监管重点，当前为前端假数据展示版。</div>
+
+                <div class="toolbar-row secondary">
+                  <div class="pond-switcher">
+                    <span class="pond-switcher__label">监管片区：</span>
+                    <t-button
+                      v-for="item in regulatorRegionOptions"
+                      :key="item.value"
+                      size="small"
+                      :theme="activeRegulatorRegion === item.value ? 'primary' : 'default'"
+                      :variant="activeRegulatorRegion === item.value ? 'base' : 'outline'"
+                      @click="activeRegulatorRegion = item.value"
+                    >
+                      {{ item.label }}
+                    </t-button>
+                  </div>
+
+                  <div class="toolbar-actions">
+                    <t-tag theme="primary" variant="light-outline">联网养殖池 {{ displayedRegulatorPonds.length }}</t-tag>
+                    <t-tag theme="warning" variant="light-outline">活跃预警 {{ activeRegulatorWarningCount }}</t-tag>
+                  </div>
+                </div>
+
+                <div class="regulator-insight-grid">
+                  <div v-for="item in regulatorQuickPanels" :key="item.title" class="regulator-overview-card">
+                    <div class="summary-card__label">{{ item.title }}</div>
+                    <div class="summary-card__value small">{{ item.value }}</div>
+                    <div class="summary-card__desc">{{ item.description }}</div>
+                  </div>
+                </div>
+
+                <div class="farmer-section-grid regulator-section-grid">
+                  <div class="farmer-subpanel">
+                    <div class="farmer-subpanel__title">重点预警清单</div>
+                    <div v-for="item in displayedRegulatorWarnings.slice(0, 4)" :key="item.id" class="warning-item">
+                      <div class="warning-item__head">
+                        <span>{{ item.title }}</span>
+                        <t-tag :theme="item.theme" variant="light-outline">{{ item.levelText }}</t-tag>
+                      </div>
+                      <div class="warning-item__time">{{ item.region }} · {{ item.companyName }} · {{ item.time }}</div>
+                      <div class="warning-item__desc">{{ item.detail }}</div>
+                    </div>
+                  </div>
+
+                  <div class="farmer-subpanel">
+                    <div class="farmer-subpanel__title">养殖主体概况</div>
+                    <div v-for="item in displayedFarmerProfiles.slice(0, 4)" :key="item.id" class="ledger-item">
+                      <div class="ledger-item__title">{{ item.companyName }}</div>
+                      <div class="warning-item__time">{{ item.region }} · 养殖池 {{ item.pondCount }} 个 · 最近上传 {{ item.latestUpload }}</div>
+                      <div class="warning-item__desc">许可证 {{ item.licenseStatusText }}，链上同步率 {{ item.chainRate }}，当前 {{ item.riskText }}。</div>
+                    </div>
+                  </div>
+                </div>
+              </t-card>
+            </t-col>
+
+            <t-col :xs="12" :lg="4">
+              <t-card title="监管账户信息" :bordered="false" class="panel-card info-panel">
+                <div class="account-box">
+                  <div class="account-item">
+                    <label>监管登录账号</label>
+                    <span>{{ monitorAccount || platformAccount }}</span>
+                  </div>
+                  <div class="account-item">
+                    <label>监管默认密码</label>
+                    <span>{{ monitorPassword || '123456' }}</span>
+                  </div>
+                  <div class="account-item">
+                    <label>区块链地址</label>
+                    <span>{{ monitorBlockchainAddress || '--' }}</span>
+                  </div>
+                </div>
+
+                <div class="guide-panel">
+                  <div class="guide-panel__title">监管重点</div>
+                  <ul class="guide-list compact">
+                    <li>优先处理高风险预警池和待审批许可证。</li>
+                    <li>对异常水质记录进行抽检、复核与批量上链。</li>
+                    <li>统一查看链上回执与监管留痕闭环状态。</li>
+                  </ul>
+                </div>
+
+                <div class="guide-panel regulator-mini-panel">
+                  <div class="guide-panel__title">今日监管动态</div>
+                  <div v-for="item in regulatorProcessTimeline.slice(0, 3)" :key="item.id" class="trace-item regulator-mini-trace">
+                    <div>
+                      <div class="ledger-item__title">{{ item.title }}</div>
+                      <div class="warning-item__time">{{ item.time }}</div>
+                    </div>
+                    <t-tag :theme="item.theme" variant="light-outline">{{ item.statusText }}</t-tag>
+                  </div>
+                </div>
+              </t-card>
+            </t-col>
+          </t-row>
+
+          <t-row :gutter="[16, 16]" class="content-row">
+            <t-col :xs="12" :lg="12">
+              <t-card title="监管专项工作区" :bordered="false" class="panel-card">
                 <div class="toolbar-row">
                   <t-button-group>
-                    <t-button :variant="currentView === 'approval' ? 'base' : 'outline'" @click="currentView = 'approval'">
-                      排污审批
-                    </t-button>
-                    <t-button :variant="currentView === 'waterData' ? 'base' : 'outline'" @click="currentView = 'waterData'">
-                      水数据
-                    </t-button>
+                    <t-button :variant="currentView === 'dashboard' ? 'base' : 'outline'" @click="switchRegulatorView('dashboard')">区域监测</t-button>
+                    <t-button :variant="currentView === 'farmers' ? 'base' : 'outline'" @click="switchRegulatorView('farmers')">养殖主体</t-button>
+                    <t-button :variant="currentView === 'approval' ? 'base' : 'outline'" @click="switchRegulatorView('approval')">许可审批</t-button>
+                    <t-button :variant="currentView === 'waterData' ? 'base' : 'outline'" @click="switchRegulatorView('waterData')">水数据</t-button>
+                    <t-button :variant="currentView === 'chain' ? 'base' : 'outline'" @click="switchRegulatorView('chain')">链上监管</t-button>
                   </t-button-group>
 
                   <div class="toolbar-actions">
-                    <span class="toolbar-meta">待审批 {{ pendingPermitCount }} 件</span>
+                    <span class="toolbar-meta">当前片区：{{ activeRegulatorRegionLabel }}</span>
                     <t-button size="small" variant="outline" @click="showContractDialog">智能合约绑定</t-button>
                   </div>
                 </div>
 
-                <div v-if="currentView === 'approval'">
+                <template v-if="currentView === 'dashboard'">
+                  <div class="monitor-chart-panel">
+                    <div class="monitor-chart-panel__header">
+                      <div>
+                        <div class="ledger-item__title">区域风险对比趋势</div>
+                        <div class="warning-item__time">对比综合评分与预警数量，辅助监管端安排抽检与巡查顺序</div>
+                      </div>
+                      <t-tag theme="primary" variant="light-outline">区域对比</t-tag>
+                    </div>
+                    <div class="monitor-chart-legend-tip">默认展示片区综合得分与预警数量；选择片区后切换为池塘明细。</div>
+                    <div ref="regulatorRegionChartRef" class="water-trend-chart regulator-trend-chart"></div>
+                  </div>
+
+                  <div class="regulator-pond-grid">
+                    <div v-for="item in displayedRegulatorPonds" :key="item.id" class="regulator-pond-card">
+                      <div class="warning-item__head">
+                        <span>{{ item.pondName }}</span>
+                        <t-tag :theme="item.theme" variant="light">{{ item.statusText }}</t-tag>
+                      </div>
+                      <div class="warning-item__time">{{ item.region }} · {{ item.companyName }} · 最近上传 {{ item.lastUpload }}</div>
+                      <div class="regulator-pond-card__metrics">
+                        <span>DO {{ item.doValue }} mg/L</span>
+                        <span>pH {{ item.phValue }}</span>
+                        <span>盐度 {{ item.salinity }} ‰</span>
+                      </div>
+                      <div class="warning-item__desc">{{ item.note }}</div>
+                    </div>
+                  </div>
+                </template>
+
+                <template v-else-if="currentView === 'farmers'">
+                  <div class="panel-tip">汇总片区内养殖主体的许可证状态、链上同步率与当前风险等级，便于开展分级监管。</div>
+                  <t-table
+                    row-key="id"
+                    :data="displayedFarmerProfiles"
+                    :columns="regulatorFarmerColumns"
+                    bordered
+                    max-height="520"
+                    :empty="'暂无主体数据'"
+                  />
+                </template>
+
+                <template v-else-if="currentView === 'approval'">
+                  <div class="panel-tip">集中处理养殖户排污许可证申请，并可直接执行通过上链、驳回与链上比对。</div>
                   <t-table
                     row-key="id"
                     :data="monitorTableData"
@@ -129,9 +560,20 @@
                     max-height="520"
                     :empty="'暂无审批数据'"
                   />
-                </div>
+                </template>
 
-                <div v-else>
+                <template v-else-if="currentView === 'waterData'">
+                  <div class="warning-center-grid regulator-warning-grid">
+                    <div v-for="item in displayedRegulatorWarnings.slice(0, 4)" :key="`reg-${item.id}`" class="warning-center-card">
+                      <div class="warning-item__head">
+                        <span>{{ item.title }}</span>
+                        <t-tag :theme="item.theme" variant="light">{{ item.levelText }}</t-tag>
+                      </div>
+                      <div class="warning-item__time">{{ item.region }} · {{ item.pondName }} · {{ item.progress }}</div>
+                      <div class="warning-item__desc">{{ item.detail }}</div>
+                    </div>
+                  </div>
+
                   <div class="toolbar-row secondary">
                     <t-tabs v-model="waterDataType">
                       <t-tab-panel value="turbidity" label="水浑浊数据" />
@@ -146,7 +588,7 @@
                   <div v-if="waterDataType === 'turbidity'">
                     <t-table
                       row-key="id"
-                      :data="turbidityTableData"
+                      :data="displayedTurbidityTableData"
                       :columns="turbidityColumns"
                       :selected-row-keys="selectedTurbidityRowKeys"
                       :select-on-row-click="true"
@@ -172,7 +614,7 @@
                   <div v-else>
                     <t-table
                       row-key="id"
-                      :data="tdsTableData"
+                      :data="displayedTdsTableData"
                       :columns="tdsColumns"
                       :selected-row-keys="selectedTdsRowKeys"
                       :select-on-row-click="true"
@@ -194,35 +636,30 @@
                       />
                     </div>
                   </div>
-                </div>
-              </t-card>
-            </t-col>
+                </template>
 
-            <t-col :xs="12" :lg="4">
-              <t-card title="监管账户信息" :bordered="false" class="panel-card info-panel">
-                <div class="account-box">
-                  <div class="account-item">
-                    <label>监管登录账号</label>
-                    <span>{{ monitorAccount || platformAccount }}</span>
-                  </div>
-                  <div class="account-item">
-                    <label>监管默认密码</label>
-                    <span>{{ monitorPassword || '123456' }}</span>
-                  </div>
-                  <div class="account-item">
-                    <label>区块链地址</label>
-                    <span>{{ monitorBlockchainAddress || '--' }}</span>
-                  </div>
-                </div>
+                <template v-else>
+                  <div class="panel-tip">查看监管端已生成的链上回执、哈希摘要与核验状态，方便后续抽检留痕与追责。</div>
+                  <t-table
+                    row-key="id"
+                    :data="regulatorChainRecords"
+                    :columns="regulatorChainColumns"
+                    bordered
+                    max-height="360"
+                    :empty="'暂无链上监管记录'"
+                  />
 
-                <div class="guide-panel">
-                  <div class="guide-panel__title">工作说明</div>
-                  <ul class="guide-list compact">
-                    <li>可集中处理养殖户许可证审批与结果复核。</li>
-                    <li>支持查看水质数据并对异常记录执行批量上链。</li>
-                    <li>可在当前页面完成合约信息绑定与管理。</li>
-                  </ul>
-                </div>
+                  <div class="trace-list big regulator-trace-list">
+                    <div v-for="item in regulatorProcessTimeline" :key="`timeline-${item.id}`" class="trace-item regulator-trace-item">
+                      <div>
+                        <div class="ledger-item__title">{{ item.title }}</div>
+                        <div class="warning-item__time">{{ item.time }}</div>
+                        <div class="warning-item__desc">{{ item.detail }}</div>
+                      </div>
+                      <t-tag :theme="item.theme" variant="light-outline">{{ item.statusText }}</t-tag>
+                    </div>
+                  </div>
+                </template>
               </t-card>
             </t-col>
           </t-row>
@@ -287,6 +724,27 @@
     </t-dialog>
 
     <t-dialog
+      :visible.sync="manualEntryDialogVisible"
+      header="手动补录水质数据"
+      :confirm-btn="{ content: '保存并判定', theme: 'primary' }"
+      :cancel-btn="{ content: '取消' }"
+      @confirm="handleManualEntrySubmit"
+      @cancel="resetManualEntryForm"
+    >
+      <t-form>
+        <t-form-item label="指标类型">
+          <t-select v-model="manualEntryForm.metricCode" :options="manualEntryMetricOptions" placeholder="请选择指标" />
+        </t-form-item>
+        <t-form-item label="检测值">
+          <t-input v-model="manualEntryForm.value" placeholder="请输入检测值" />
+        </t-form-item>
+        <t-form-item label="备注说明">
+          <t-input v-model="manualEntryForm.remark" placeholder="如：人工复测 / 巡检抽样" />
+        </t-form-item>
+      </t-form>
+    </t-dialog>
+
+    <t-dialog
       :visible.sync="compareDialogVisible"
       header="链上比对结果"
       :footer="false"
@@ -315,7 +773,34 @@ import {
   approvePermissionByManager,
   Login,
 } from '@/api/water/water.js';
+import { TooltipComponent, LegendComponent, GridComponent } from 'echarts/components';
+import { LineChart } from 'echarts/charts';
+import { CanvasRenderer } from 'echarts/renderers';
+import * as echarts from 'echarts/core';
 import { ImageViewer as TImageViewer, Image as TImage } from 'tdesign-vue';
+import { WATER_DATA_TYPES, METRIC_LEVEL_THEME, getWaterMetricLevel } from '@/constants/water-thresholds.js';
+
+echarts.use([TooltipComponent, LegendComponent, GridComponent, LineChart, CanvasRenderer]);
+
+const MOCK_PERMIT_IMAGE = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+    <defs>
+      <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+        <stop stop-color="#eff7ff" offset="0%" />
+        <stop stop-color="#d8ebff" offset="100%" />
+      </linearGradient>
+    </defs>
+    <rect width="120" height="120" rx="18" fill="url(#g)" />
+    <rect x="20" y="18" width="80" height="84" rx="12" fill="#ffffff" stroke="#8db8f5" />
+    <text x="60" y="52" font-size="16" text-anchor="middle" fill="#1f74d8" font-family="Arial">Permit</text>
+    <text x="60" y="76" font-size="12" text-anchor="middle" fill="#4f6780" font-family="Arial">演示数据</text>
+  </svg>
+`)}`;
+
+const TRACEABILITY_QR_IMAGES = [
+  new URL('../../../res/cod1.png', import.meta.url).href,
+  new URL('../../../res/cod2.png', import.meta.url).href,
+];
 
 export default {
   name: 'WaterWorkbench',
@@ -330,8 +815,9 @@ export default {
       currentUser: '',
       userType: '',
       currentLoginType: '',
-      currentView: 'approval',
+      currentView: 'dashboard',
       waterDataType: 'turbidity',
+      farmingProcessLoading: false,
       uploadCommonFileUrl: '/api/common/upload',
       dialogVisible: false,
       contractDialogVisible: false,
@@ -358,6 +844,238 @@ export default {
       monitorTableData: [],
       turbidityTableData: [],
       tdsTableData: [],
+      pondOptions: [
+        { value: 'pond-1', label: '1号养殖池', tone: 'blue' },
+        { value: 'pond-2', label: '2号养殖池', tone: 'teal' },
+        { value: 'pond-3', label: '3号养殖池', tone: 'purple' },
+      ],
+      activePondId: 'pond-2',
+      selectedTraceabilityId: 1,
+      pondMetricsMap: {
+        'pond-1': [
+          { metricCode: 'WATER_TEMP', value: 25.8, tip: '温度平稳，适合继续保持当前换水节奏。' },
+          { metricCode: 'SALINITY', value: 23.9, tip: '盐度稳定，符合本池养殖区间。' },
+          { metricCode: 'PH', value: 8.05, tip: '酸碱度正常。' },
+          { metricCode: 'DO', value: 5.3, tip: '溶解氧充足，夜间表现平稳。' },
+          { metricCode: 'AMMONIA_N', value: 0.14, tip: '氨氮处于安全范围。' },
+          { metricCode: 'NITRITE', value: 0.08, tip: '亚硝酸盐正常。' },
+        ],
+        'pond-2': [
+          { metricCode: 'WATER_TEMP', value: 26.4, tip: '温度适宜，维持当前增氧与换水节奏。' },
+          { metricCode: 'SALINITY', value: 24.8, tip: '盐度稳定，符合当前海水养殖区间。' },
+          { metricCode: 'PH', value: 8.1, tip: '酸碱度正常，可继续保持当前日常巡检。' },
+          { metricCode: 'DO', value: 4.2, tip: '溶解氧偏低，建议重点关注夜间增氧。' },
+          { metricCode: 'AMMONIA_N', value: 0.16, tip: '氨氮处于可控区间。' },
+          { metricCode: 'NITRITE', value: 0.13, tip: '亚硝酸盐进入预警区间，建议复测并换水。' },
+        ],
+        'pond-3': [
+          { metricCode: 'WATER_TEMP', value: 27.1, tip: '水温略高，需关注午后波动。' },
+          { metricCode: 'SALINITY', value: 26.1, tip: '盐度正常。' },
+          { metricCode: 'PH', value: 8.18, tip: 'pH 略高但仍处于可控范围。' },
+          { metricCode: 'DO', value: 4.9, tip: '溶解氧接近警戒线，建议夜间继续观察。' },
+          { metricCode: 'AMMONIA_N', value: 0.19, tip: '氨氮接近预警值。' },
+          { metricCode: 'NITRITE', value: 0.09, tip: '亚硝酸盐正常。' },
+        ],
+      },
+      warningTodoList: [
+        {
+          id: 1,
+          pondId: 'pond-2',
+          pondName: '2号养殖池',
+          title: '2号池亚硝酸盐偏高',
+          type: 'water_quality',
+          level: 'warning',
+          levelText: '预警',
+          theme: 'warning',
+          time: '今日 10:20',
+          detail: '当前数值 0.13 mg/L，建议立即复测并安排局部换水。',
+        },
+        {
+          id: 2,
+          pondId: 'pond-2',
+          pondName: '2号养殖池',
+          title: '夜间溶解氧存在下降风险',
+          type: 'environment',
+          level: 'warning',
+          levelText: '关注',
+          theme: 'warning',
+          time: '今日 05:40',
+          detail: '凌晨时段 DO 最低 4.2 mg/L，建议提前开启增氧设备。',
+        },
+        {
+          id: 3,
+          pondId: 'pond-1',
+          pondName: '1号养殖池',
+          title: '1号池状态平稳',
+          type: 'water_quality',
+          level: 'normal',
+          levelText: '正常',
+          theme: 'success',
+          time: '今日 09:15',
+          detail: '近 24 小时主要指标均在正常范围内。',
+        },
+      ],
+      farmingLedgerItems: [
+        { id: 1, pondId: 'pond-1', pondName: '1号养殖池', title: '苗种投放登记', time: '04-05 09:30', status: '已存证', detail: '南美白对虾苗 12000 尾，来源已登记。' },
+        { id: 2, pondId: 'pond-2', pondName: '2号养殖池', title: '今日投喂记录', time: '04-06 07:10', status: '待上链', detail: '投喂高蛋白饲料 18kg，计划晚间复投 12kg。' },
+        { id: 3, pondId: 'pond-3', pondName: '3号养殖池', title: '用药巡检记录', time: '04-06 08:45', status: '无异常', detail: '今日未使用药物，巡检已完成。' },
+      ],
+      traceabilityTimeline: [
+        {
+          id: 1,
+          pondId: 'pond-2',
+          pondName: '2号养殖池',
+          title: '水质日报已生成存证',
+          time: '今日 09:00',
+          evidenceNo: 'BC-WATER-20260406-001',
+          onChain: true,
+          ownerName: '李大海',
+          contentTitle: '水质监测记录',
+          chainTime: '2026-04-06 16:33:22',
+          hash: '0x8f2e9d7a3b1c6f4e2d9a8b7c5e3f1a2d4c6b8e9f7a2d',
+          blockHeight: '1256800',
+          description: '本数据已上链存证，不可篡改，监管部门可核验。',
+          verifyText: '区块链存证验证通过',
+        },
+        {
+          id: 2,
+          pondId: 'pond-2',
+          pondName: '2号养殖池',
+          title: '投喂记录待确认上链',
+          time: '今日 07:15',
+          evidenceNo: 'BC-FEED-20260406-003',
+          onChain: false,
+          ownerName: '李大海',
+          contentTitle: '养殖投喂记录',
+          chainTime: '等待上链确认',
+          hash: '',
+          blockHeight: '--',
+          description: '记录已提交到存证队列，待完成链上确认后可生成正式回执。',
+          verifyText: '正在等待链上确认',
+        },
+        {
+          id: 3,
+          pondId: 'pond-1',
+          pondName: '1号养殖池',
+          title: '许可证审核状态同步',
+          time: '昨日 17:40',
+          evidenceNo: 'BC-PERMIT-20260405-002',
+          onChain: true,
+          ownerName: '李大海',
+          contentTitle: '许可证审核记录',
+          chainTime: '2026-04-05 17:40:12',
+          hash: '0x5cd4a91f8e33bc7d4a2e19b0cc8d12346f8e0a7c19d2ef5a',
+          blockHeight: '1256431',
+          description: '许可证审批结论已完成存证留痕，可用于后续监管核验。',
+          verifyText: '区块链存证验证通过',
+        },
+        {
+          id: 4,
+          pondId: 'pond-2',
+          pondName: '2号养殖池',
+          title: '苗种投放记录已同步存证',
+          time: '昨日 16:20',
+          evidenceNo: 'BC-SEED-20260405-006',
+          onChain: true,
+          ownerName: '李大海',
+          contentTitle: '苗种投放记录',
+          chainTime: '2026-04-05 16:20:45',
+          hash: '0x73b5de0ca14f92d6be1a7c5920df48ab35cde7196ab40e2f',
+          blockHeight: '1256315',
+          description: '苗种投放批次与来源信息已完成链上固化，可追溯来源与时间。',
+          verifyText: '区块链存证验证通过',
+        },
+        {
+          id: 5,
+          pondId: 'pond-2',
+          pondName: '2号养殖池',
+          title: '增氧处置记录待复核',
+          time: '昨日 06:45',
+          evidenceNo: 'BC-ALERT-20260405-009',
+          onChain: false,
+          ownerName: '李大海',
+          contentTitle: '预警处置记录',
+          chainTime: '等待上链确认',
+          hash: '',
+          blockHeight: '--',
+          description: '增氧处置记录已提交，待监管复核通过后同步生成链上回执。',
+          verifyText: '待监管复核并上链',
+        },
+        {
+          id: 6,
+          pondId: 'pond-3',
+          pondName: '3号养殖池',
+          title: '用药巡检记录已归档',
+          time: '昨日 11:30',
+          evidenceNo: 'BC-MED-20260405-011',
+          onChain: true,
+          ownerName: '李大海',
+          contentTitle: '用药巡检记录',
+          chainTime: '2026-04-05 11:30:27',
+          hash: '0x92adbe71c4f58e2061d8f7c3b9e4a76dd8cb21ae0f94b3c5',
+          blockHeight: '1256102',
+          description: '用药巡检结果已归档到链上，可用于后续批次溯源与合规核查。',
+          verifyText: '区块链存证验证通过',
+        },
+      ],
+      farmerView: 'monitor',
+      trendRange: '24h',
+      manualEntryDialogVisible: false,
+      waterTrendChart: null,
+      regulatorRegionChart: null,
+      chartRefreshTimer: null,
+      chartRenderRetryTimer: null,
+      regulatorChartRetryTimer: null,
+      chartRefreshTick: 0,
+      activeRegulatorRegion: 'all',
+      regulatorRegionOptions: [
+        { value: 'all', label: '全部片区' },
+        { value: 'east', label: '东港示范区' },
+        { value: 'west', label: '西湾养殖区' },
+        { value: 'south', label: '南堤循环水区' },
+      ],
+      manualEntryForm: {
+        metricCode: 'DO',
+        value: '',
+        remark: '',
+      },
+      monitorRecords: [
+        { id: 1, pondId: 'pond-2', pondName: '2号养殖池', time: '2026-04-06 10:20', metricCode: 'NITRITE', metricLabel: '亚硝酸盐', valueText: '0.13 mg/L', sourceText: '自动采集', levelText: '预警', theme: 'warning', suggestion: '建议局部换水并在 2 小时后复测。' },
+        { id: 2, pondId: 'pond-2', pondName: '2号养殖池', time: '2026-04-06 09:40', metricCode: 'DO', metricLabel: '溶解氧', valueText: '4.2 mg/L', sourceText: '自动采集', levelText: '预警', theme: 'warning', suggestion: '夜间提前增氧，避免清晨缺氧。' },
+        { id: 3, pondId: 'pond-1', pondName: '1号养殖池', time: '2026-04-06 08:50', metricCode: 'PH', metricLabel: 'pH', valueText: '8.05', sourceText: '人工补录', levelText: '正常', theme: 'success', suggestion: '酸碱度正常，保持当前管理方式。' },
+        { id: 4, pondId: 'pond-3', pondName: '3号养殖池', time: '2026-04-06 07:30', metricCode: 'WATER_TEMP', metricLabel: '水温', valueText: '27.1 ℃', sourceText: '自动采集', levelText: '正常', theme: 'success', suggestion: '温度稳定，适合当前养殖阶段。' },
+        { id: 5, pondId: 'pond-1', pondName: '1号养殖池', time: '2026-04-05 20:10', metricCode: 'SALINITY', metricLabel: '盐度', valueText: '23.9 ‰', sourceText: '自动采集', levelText: '正常', theme: 'success', suggestion: '盐度稳定，适合海水养殖。' },
+      ],
+      regulatorPondSnapshots: [
+        { id: 1, regionCode: 'east', region: '东港示范区', companyName: '蓝海一号养殖场', pondName: '东港-1号池', doValue: 4.1, phValue: 8.17, salinity: 25.2, score: 82, warningCount: 2, statusText: '重点关注', theme: 'warning', lastUpload: '10:18', note: '凌晨溶解氧走低，已通知养殖户提前开启增氧设备。' },
+        { id: 2, regionCode: 'east', region: '东港示范区', companyName: '滨海虾贝联合社', pondName: '东港-2号池', doValue: 5.4, phValue: 8.05, salinity: 24.7, score: 91, warningCount: 0, statusText: '运行稳定', theme: 'success', lastUpload: '09:42', note: '当前片区指标平稳，可维持常规巡检频率。' },
+        { id: 3, regionCode: 'west', region: '西湾养殖区', companyName: '澄海生态养殖合作社', pondName: '西湾-3号池', doValue: 3.8, phValue: 8.24, salinity: 26.1, score: 76, warningCount: 3, statusText: '高风险', theme: 'danger', lastUpload: '09:50', note: '氨氮与溶解氧连续预警，建议尽快安排现场复核。' },
+        { id: 4, regionCode: 'west', region: '西湾养殖区', companyName: '澄海生态养殖合作社', pondName: '西湾-1号池', doValue: 5.1, phValue: 8.09, salinity: 25.4, score: 88, warningCount: 1, statusText: '可控', theme: 'primary', lastUpload: '08:56', note: '近期波动已回落，仍需持续观察晚间数据。' },
+        { id: 5, regionCode: 'south', region: '南堤循环水区', companyName: '南堤智慧工厂化基地', pondName: '南堤-A池', doValue: 4.6, phValue: 8.14, salinity: 23.8, score: 84, warningCount: 1, statusText: '轻度预警', theme: 'warning', lastUpload: '10:05', note: '盐度略有波动，系统已提醒养殖户复核补水方案。' },
+        { id: 6, regionCode: 'south', region: '南堤循环水区', companyName: '南堤智慧工厂化基地', pondName: '南堤-B池', doValue: 5.2, phValue: 8.02, salinity: 24.2, score: 90, warningCount: 0, statusText: '运行稳定', theme: 'success', lastUpload: '09:12', note: '循环水系统状态良好，今日未触发异常。' },
+      ],
+      regulatorWarningItems: [
+        { id: 1, regionCode: 'west', region: '西湾养殖区', companyName: '澄海生态养殖合作社', pondName: '西湾-3号池', title: '氨氮连续两次超阈值', levelText: '高风险', theme: 'danger', time: '今日 09:50', progress: '待核查', detail: '当前 0.46 mg/L，建议派发现场抽检并跟踪换水处理结果。' },
+        { id: 2, regionCode: 'east', region: '东港示范区', companyName: '蓝海一号养殖场', pondName: '东港-1号池', title: '夜间溶解氧偏低', levelText: '预警', theme: 'warning', time: '今日 05:30', progress: '处理中', detail: '最低值 4.1 mg/L，已通知增氧并要求上传复测结果。' },
+        { id: 3, regionCode: 'south', region: '南堤循环水区', companyName: '南堤智慧工厂化基地', pondName: '南堤-A池', title: '盐度波动异常', levelText: '关注', theme: 'primary', time: '今日 08:40', progress: '复测中', detail: '较昨日波动 1.8‰，建议复核补水与循环参数。' },
+        { id: 4, regionCode: 'west', region: '西湾养殖区', companyName: '澄海生态养殖合作社', pondName: '西湾-1号池', title: '设备离线 15 分钟', levelText: '已恢复', theme: 'success', time: '今日 07:25', progress: '已闭环', detail: '采集终端已重连，系统自动补传缺失数据。' },
+      ],
+      regulatorFarmerProfiles: [
+        { id: 1, accountId: 'COMP-1001', regionCode: 'east', region: '东港示范区', companyName: '蓝海一号养殖场', pondCount: 3, latestUpload: '今日 10:18', licenseStatusText: '许可证有效', licenseTheme: 'success', chainRate: '92%', riskText: '中风险', riskTheme: 'warning' },
+        { id: 2, accountId: 'COMP-1002', regionCode: 'east', region: '东港示范区', companyName: '滨海虾贝联合社', pondCount: 2, latestUpload: '今日 09:42', licenseStatusText: '许可证有效', licenseTheme: 'success', chainRate: '95%', riskText: '低风险', riskTheme: 'success' },
+        { id: 3, accountId: 'COMP-1003', regionCode: 'west', region: '西湾养殖区', companyName: '澄海生态养殖合作社', pondCount: 4, latestUpload: '今日 09:50', licenseStatusText: '待补充材料', licenseTheme: 'warning', chainRate: '81%', riskText: '高风险', riskTheme: 'danger' },
+        { id: 4, accountId: 'COMP-1004', regionCode: 'south', region: '南堤循环水区', companyName: '南堤智慧工厂化基地', pondCount: 5, latestUpload: '今日 10:05', licenseStatusText: '许可证有效', licenseTheme: 'success', chainRate: '97%', riskText: '低风险', riskTheme: 'success' },
+      ],
+      regulatorChainRecords: [
+        { id: 1, businessType: '水质日报', evidenceNo: 'BC-REG-20260406-018', companyName: '蓝海一号养殖场', uploadTime: '2026-04-06 10:20', verifyText: '校验通过', theme: 'success', hash: '0x8ab2...91f0' },
+        { id: 2, businessType: '预警处置', evidenceNo: 'BC-REG-20260406-021', companyName: '澄海生态养殖合作社', uploadTime: '2026-04-06 09:56', verifyText: '待复核', theme: 'warning', hash: '0x5dc1...4aa7' },
+        { id: 3, businessType: '许可证审批', evidenceNo: 'BC-REG-20260405-113', companyName: '南堤智慧工厂化基地', uploadTime: '2026-04-05 17:42', verifyText: '已归档', theme: 'primary', hash: '0x2f31...7ce2' },
+      ],
+      regulatorProcessTimeline: [
+        { id: 1, title: '西湾养殖区高风险池已发起现场复核', time: '今日 10:12', detail: '监管端已下发抽检任务，待养殖户回传处置结果与照片。', statusText: '处理中', theme: 'warning' },
+        { id: 2, title: '东港示范区今日巡检批次已归档', time: '今日 09:35', detail: '12 条监测数据已生成监管留痕并同步至链上存证队列。', statusText: '已归档', theme: 'success' },
+        { id: 3, title: '南堤循环水区许可证复核完成', time: '昨日 17:42', detail: '审批意见与合同摘要已同步入监管台账。', statusText: '已完成', theme: 'primary' },
+      ],
       selectedTdsRowKeys: [],
       selectedTurbidityRowKeys: [],
       turbidityPagination: {
@@ -578,36 +1296,112 @@ export default {
       turbidityColumns: [
         { colKey: 'row-select', type: 'multiple', width: 50, fixed: 'left' },
         { colKey: 'id', title: '序号', width: 80 },
-        { colKey: 'userId', title: '养殖户 ID', width: 150 },
-        { colKey: 'data', title: '浑浊度' },
+        { colKey: 'companyName', title: '养殖户名称', minWidth: 180 },
+        { colKey: 'region', title: '所属片区', width: 140 },
+        { colKey: 'pondName', title: '养殖池', width: 140 },
+        { colKey: 'data', title: '浑浊度', width: 120 },
         { colKey: 'time', title: '采集时间', width: 180 },
         {
           colKey: 'status',
           title: '状态',
+          width: 100,
           cell: (h, { row }) => h('t-tag', { props: { theme: row.status === '正常' ? 'success' : 'danger', variant: 'light' } }, row.status),
         },
         {
           colKey: 'onChain',
           title: '是否上链',
+          width: 110,
           cell: (h, { row }) => h('t-tag', { props: { theme: row.onChain ? 'success' : 'warning', variant: 'light' } }, row.onChain ? '已上链' : '未上链'),
         },
       ],
       tdsColumns: [
         { colKey: 'row-select', type: 'multiple', width: 50, fixed: 'left' },
         { colKey: 'id', title: '序号', width: 80 },
-        { colKey: 'userId', title: '养殖户 ID', width: 150 },
-        { colKey: 'data', title: 'TDS 值' },
+        { colKey: 'companyName', title: '养殖户名称', minWidth: 180 },
+        { colKey: 'region', title: '所属片区', width: 140 },
+        { colKey: 'pondName', title: '养殖池', width: 140 },
+        { colKey: 'data', title: 'TDS 值', width: 130 },
         { colKey: 'time', title: '采集时间', width: 180 },
         {
           colKey: 'status',
           title: '状态',
+          width: 100,
           cell: (h, { row }) => h('t-tag', { props: { theme: row.status === '正常' ? 'success' : 'danger', variant: 'light' } }, row.status),
         },
         {
           colKey: 'onChain',
           title: '是否上链',
+          width: 110,
           cell: (h, { row }) => h('t-tag', { props: { theme: row.onChain ? 'success' : 'warning', variant: 'light' } }, row.onChain ? '已上链' : '未上链'),
         },
+      ],
+      farmerMonitorColumns: [
+        { colKey: 'time', title: '采集时间', width: 180 },
+        { colKey: 'metricLabel', title: '指标类型', width: 140 },
+        { colKey: 'valueText', title: '检测值', width: 140 },
+        { colKey: 'sourceText', title: '来源', width: 120 },
+        {
+          colKey: 'levelText',
+          title: '判定结果',
+          width: 110,
+          cell: (h, { row }) => h('t-tag', { props: { theme: row.theme || 'primary', variant: 'light' } }, row.levelText),
+        },
+        { colKey: 'suggestion', title: '处置建议' },
+      ],
+      farmerChainColumns: [
+        { colKey: 'time', title: '时间', width: 140 },
+        {
+          colKey: 'actionType',
+          title: '操作类型',
+          width: 120,
+          cell: (h, { row }) => h('t-tag', { props: { theme: row.actionTheme || 'primary', variant: 'light' } }, row.actionType),
+        },
+        { colKey: 'detail', title: '详情', minWidth: 260 },
+        {
+          colKey: 'statusText',
+          title: '上链状态',
+          width: 110,
+          cell: (h, { row }) => h('t-tag', { props: { theme: row.statusTheme || 'success', variant: 'light-outline' } }, row.statusText),
+        },
+        {
+          colKey: 'hashShort',
+          title: '区块哈希',
+          minWidth: 150,
+          cell: (h, { row }) => h('span', { class: 'chain-hash-text' }, row.hashShort),
+        },
+      ],
+      regulatorFarmerColumns: [
+        { colKey: 'companyName', title: '养殖主体', minWidth: 180 },
+        { colKey: 'accountId', title: '主体编号', width: 120 },
+        { colKey: 'region', title: '所属片区', width: 150 },
+        { colKey: 'pondCount', title: '养殖池数', width: 110 },
+        {
+          colKey: 'licenseStatusText',
+          title: '许可证状态',
+          width: 130,
+          cell: (h, { row }) => h('t-tag', { props: { theme: row.licenseTheme || 'primary', variant: 'light' } }, row.licenseStatusText),
+        },
+        { colKey: 'chainRate', title: '链上同步率', width: 120 },
+        { colKey: 'latestUpload', title: '最近上传', width: 140 },
+        {
+          colKey: 'riskText',
+          title: '风险等级',
+          width: 120,
+          cell: (h, { row }) => h('t-tag', { props: { theme: row.riskTheme || 'primary', variant: 'light-outline' } }, row.riskText),
+        },
+      ],
+      regulatorChainColumns: [
+        { colKey: 'businessType', title: '业务类型', width: 120 },
+        { colKey: 'evidenceNo', title: '存证编号', minWidth: 190 },
+        { colKey: 'companyName', title: '养殖主体', minWidth: 160 },
+        { colKey: 'uploadTime', title: '提交时间', width: 180 },
+        {
+          colKey: 'verifyText',
+          title: '核验状态',
+          width: 120,
+          cell: (h, { row }) => h('t-tag', { props: { theme: row.theme || 'primary', variant: 'light' } }, row.verifyText),
+        },
+        { colKey: 'hash', title: '哈希摘要', minWidth: 150 },
       ],
     };
   },
@@ -616,15 +1410,15 @@ export default {
       return this.$route?.name === 'monitor-login' ? '监管端' : '养殖户端';
     },
     roleBadge() {
-      return this.userType === 'monitor' ? '监管端 · 许可证审批 · 水数据上链' : '养殖户端 · 许可证申请 · 链上核验';
+      return this.userType === 'monitor' ? '监管端 · 全域巡查 · 许可审批' : '养殖户端 · 水质仪表盘 · 全程留痕';
     },
     roleTitle() {
-      return this.userType === 'monitor' ? '监管水质审查工作台' : '养殖户水质合规工作台';
+      return this.userType === 'monitor' ? '海水养殖监管驾驶舱' : '养殖户可信养殖工作台';
     },
     roleSubtitle() {
       return this.userType === 'monitor'
-        ? '集中查看养殖户许可证、审批请求与水质分页数据，并直接执行合约绑定和批量上链。'
-        : '基于当前平台登录态快速进入养殖户工作台，完成许可证提交、状态跟踪与链上比对。';
+        ? '集中查看片区风险、养殖主体合规状态、水质异常与链上存证进度，支持监管端开展分级巡查。'
+        : '基于当前平台登录态快速进入养殖户工作台，集中查看阈值化水质指标、预警待办、存证进度与许可证状态。';
     },
     platformAccount() {
       return localStorage.getItem('platformUserAccount') || this.$store.state.user?.userInfo?.userAccount || '--';
@@ -639,63 +1433,310 @@ export default {
       return this.userType === 'monitor' ? this.monitorTableData : this.enterpriseTableData;
     },
     pendingPermitCount() {
-      return this.monitorTableData.filter((item) => item.status === 0).length;
+      return this.monitorTableData.filter((item) => Number(item.status) === 0).length;
     },
     approvedPermitCount() {
-      return this.permitSource.filter((item) => item.status === 1).length;
+      return this.permitSource.filter((item) => Number(item.status) === 1).length;
     },
     rejectedPermitCount() {
-      return this.permitSource.filter((item) => item.status === 2).length;
+      return this.permitSource.filter((item) => Number(item.status) === 2).length;
     },
     abnormalWaterCount() {
       return [...this.turbidityTableData, ...this.tdsTableData].filter((item) => item.status && item.status !== '正常').length;
+    },
+    primaryThresholdRules() {
+      return WATER_DATA_TYPES.filter((item) => !['TDS', 'TURBIDITY'].includes(item.metricCode));
+    },
+    activePondLabel() {
+      return this.pondOptions.find((item) => item.value === this.activePondId)?.label || '当前养殖池';
+    },
+    activeRegulatorRegionLabel() {
+      return this.regulatorRegionOptions.find((item) => item.value === this.activeRegulatorRegion)?.label || '全部片区';
+    },
+    farmerMetrics() {
+      return this.pondMetricsMap[this.activePondId] || [];
+    },
+    farmerMetricCards() {
+      return this.farmerMetrics.map((item) => {
+        const rule = WATER_DATA_TYPES.find((ruleItem) => ruleItem.metricCode === item.metricCode) || {};
+        const level = getWaterMetricLevel(item.metricCode, item.value);
+        return {
+          ...item,
+          ...rule,
+          level,
+          theme: METRIC_LEVEL_THEME[level] || 'primary',
+          levelText: this.formatMetricLevel(level),
+        };
+      });
+    },
+    filteredWarningList() {
+      return this.warningTodoList.filter((item) => item.pondId === this.activePondId);
+    },
+    filteredLedgerItems() {
+      return this.farmingLedgerItems.filter((item) => item.pondId === this.activePondId);
+    },
+    filteredTraceabilityTimeline() {
+      return this.traceabilityTimeline.filter((item) => item.pondId === this.activePondId);
+    },
+    currentTraceabilityCertificate() {
+      return this.filteredTraceabilityTimeline.find((item) => item.id === this.selectedTraceabilityId)
+        || this.filteredTraceabilityTimeline[0]
+        || null;
+    },
+    recentChainRecords() {
+      return this.filteredTraceabilityTimeline
+        .map((item, index) => ({
+          id: item.id,
+          time: item.time,
+          actionType: this.getChainActionType(item),
+          actionTheme: item.onChain ? 'primary' : 'warning',
+          detail: `${item.title} · ${item.evidenceNo}`,
+          statusText: item.onChain ? '已上链' : '待上链',
+          statusTheme: item.onChain ? 'success' : 'warning',
+          hashShort: this.getChainHashSummary(item, index),
+        }))
+        .slice(0, 5);
+    },
+    farmerWarningCount() {
+      return this.filteredWarningList.filter((item) => item.level !== 'normal').length;
+    },
+    todayChainCount() {
+      return this.filteredTraceabilityTimeline.filter((item) => item.onChain).length;
+    },
+    manualEntryMetricOptions() {
+      return this.primaryThresholdRules.map((item) => ({
+        label: `${item.label}${item.unit ? `（${item.unit}）` : ''}`,
+        value: item.metricCode,
+      }));
+    },
+    monitorPeriodSummary() {
+      const configMap = {
+        '24h': { label: '近24小时', samples: 24, abnormal: 2, onChain: 6, tip: '更适合查看实时波动与短时风险。' },
+        '7d': { label: '近7天', samples: 168, abnormal: 5, onChain: 18, tip: '适合观察本周水质变化趋势。' },
+        '30d': { label: '近30天', samples: 720, abnormal: 11, onChain: 42, tip: '适合复盘阶段性养殖环境变化。' },
+      };
+      return configMap[this.trendRange] || configMap['24h'];
+    },
+    displayMonitorRecords() {
+      const countMap = { '24h': 5, '7d': 8, '30d': 12 };
+      return this.monitorRecords.filter((item) => item.pondId === this.activePondId).slice(0, countMap[this.trendRange] || 5);
+    },
+    displayedRegulatorPonds() {
+      if (this.activeRegulatorRegion === 'all') {
+        return this.regulatorPondSnapshots;
+      }
+      return this.regulatorPondSnapshots.filter((item) => item.regionCode === this.activeRegulatorRegion);
+    },
+    displayedRegulatorWarnings() {
+      if (this.activeRegulatorRegion === 'all') {
+        return this.regulatorWarningItems;
+      }
+      return this.regulatorWarningItems.filter((item) => item.regionCode === this.activeRegulatorRegion);
+    },
+    linkedRegulatorFarmers() {
+      const permitNames = this.monitorTableData.map((item) => item.companyName).filter(Boolean);
+      const baseNames = this.regulatorFarmerProfiles.map((item) => item.companyName).filter(Boolean);
+      const mergedNames = [...new Set([...permitNames, ...baseNames])];
+
+      return mergedNames.map((companyName, index) => {
+        const matchedProfile = this.regulatorFarmerProfiles.find((item) => item.companyName === companyName) || this.regulatorFarmerProfiles[index % this.regulatorFarmerProfiles.length];
+        const permitRows = this.monitorTableData.filter((item) => item.companyName === companyName);
+        const latestPermit = permitRows[0] || {};
+        const statusMap = {
+          0: { text: '待审批', theme: 'warning' },
+          1: { text: '许可证有效', theme: 'success' },
+          2: { text: '审批未通过', theme: 'danger' },
+        };
+        const fallbackState = matchedProfile.licenseStatusText
+          ? { text: matchedProfile.licenseStatusText, theme: matchedProfile.licenseTheme || 'primary' }
+          : statusMap[0];
+        const permitState = statusMap[Number(latestPermit.status)] || fallbackState;
+
+        return {
+          ...matchedProfile,
+          id: latestPermit.id || matchedProfile.id || index + 1,
+          companyName,
+          accountId: matchedProfile.accountId || `COMP-${1001 + index}`,
+          latestUpload: latestPermit.createTime || matchedProfile.latestUpload || '--',
+          licenseStatusText: permitState.text,
+          licenseTheme: permitState.theme,
+        };
+      });
+    },
+    displayedFarmerProfiles() {
+      if (this.activeRegulatorRegion === 'all') {
+        return this.linkedRegulatorFarmers;
+      }
+      return this.linkedRegulatorFarmers.filter((item) => item.regionCode === this.activeRegulatorRegion);
+    },
+    displayedTurbidityTableData() {
+      if (this.activeRegulatorRegion === 'all') {
+        return this.turbidityTableData;
+      }
+      return this.turbidityTableData.filter((item) => item.regionCode === this.activeRegulatorRegion);
+    },
+    displayedTdsTableData() {
+      if (this.activeRegulatorRegion === 'all') {
+        return this.tdsTableData;
+      }
+      return this.tdsTableData.filter((item) => item.regionCode === this.activeRegulatorRegion);
+    },
+    activeRegulatorWarningCount() {
+      return this.displayedRegulatorWarnings.filter((item) => item.progress !== '已闭环').length;
+    },
+    highRiskPondCount() {
+      return this.displayedRegulatorPonds.filter((item) => item.theme === 'danger').length;
+    },
+    regulatorQuickPanels() {
+      const totalRegions = this.regulatorRegionOptions.filter((item) => item.value !== 'all').length;
+      const coveredRegions = new Set(this.displayedRegulatorPonds.map((item) => item.regionCode)).size;
+      const permitRate = Math.round((this.approvedPermitCount / Math.max(this.permitSource.length, 1)) * 100);
+      const closedWarningCount = this.displayedRegulatorWarnings.filter((item) => item.progress === '已闭环').length;
+      const closureRate = Math.round((closedWarningCount / Math.max(this.displayedRegulatorWarnings.length, 1)) * 100);
+
+      return [
+        {
+          title: '片区接入进度',
+          value: `${coveredRegions}/${totalRegions}`,
+          description: '当前片区均已纳入监管台账。',
+        },
+        {
+          title: '许可证合规率',
+          value: `${permitRate}%`,
+          description: '已审批许可证 / 当前申请总量。',
+        },
+        {
+          title: '重点监管主体',
+          value: this.displayedFarmerProfiles.length,
+          description: '支持分级查看主体合规与同步情况。',
+        },
+        {
+          title: '预警闭环率',
+          value: `${closureRate}%`,
+          description: '展示今日已闭环的异常预警处理比例。',
+        },
+      ];
+    },
+    regulatorRegionChartData() {
+      if (this.activeRegulatorRegion === 'all') {
+        const regionList = this.regulatorRegionOptions.filter((item) => item.value !== 'all');
+        return {
+          xAxis: regionList.map((item) => item.label),
+          scoreValues: regionList.map((item) => {
+            const regionPonds = this.regulatorPondSnapshots.filter((pond) => pond.regionCode === item.value);
+            const score = regionPonds.reduce((sum, pond) => sum + pond.score, 0) / Math.max(regionPonds.length, 1);
+            return Number(score.toFixed(1));
+          }),
+          warningValues: regionList.map((item) => this.regulatorWarningItems.filter((warning) => warning.regionCode === item.value && warning.progress !== '已闭环').length),
+        };
+      }
+
+      return {
+        xAxis: this.displayedRegulatorPonds.map((item) => item.pondName),
+        scoreValues: this.displayedRegulatorPonds.map((item) => item.score),
+        warningValues: this.displayedRegulatorPonds.map((item) => item.warningCount),
+      };
+    },
+    monitorTrendData() {
+      const baseMap = {
+        '24h': {
+          xAxis: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00', '24:00'],
+          doBase: [5.9, 5.6, 5.2, 4.8, 4.4, 4.1, 4.3, 4.7, 5.0, 5.4, 5.7, 5.5, 5.3],
+          phBase: [8.03, 8.02, 8.00, 7.98, 8.01, 8.06, 8.12, 8.18, 8.16, 8.11, 8.07, 8.04, 8.02],
+        },
+        '7d': {
+          xAxis: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+          doBase: [5.8, 5.5, 5.1, 4.7, 5.0, 4.6, 5.2],
+          phBase: [8.09, 8.15, 8.07, 8.21, 8.12, 8.04, 8.13],
+        },
+        '30d': {
+          xAxis: ['第1周', '第2周', '第3周', '第4周', '第5周', '第6周'],
+          doBase: [5.7, 5.4, 5.0, 4.6, 4.9, 5.2],
+          phBase: [8.08, 8.14, 8.17, 8.03, 8.10, 8.15],
+        },
+      };
+
+      const pulseMap = {
+        '24h': [
+          [0.00, 0.05, -0.03, 0.02, -0.04, 0.03, -0.02, 0.05, -0.03, 0.04, 0.02, -0.01, 0.00],
+          [0.00, -0.03, 0.02, -0.04, 0.03, -0.05, 0.04, -0.02, 0.03, -0.02, 0.01, 0.02, 0.00],
+          [0.00, 0.02, 0.00, -0.03, 0.01, 0.04, -0.03, 0.02, 0.01, 0.03, -0.02, 0.01, 0.00],
+        ],
+        '7d': [
+          [0.00, 0.04, -0.03, 0.02, -0.04, 0.03, 0.00],
+          [0.00, -0.02, 0.03, -0.04, 0.02, -0.03, 0.01],
+          [0.00, 0.01, -0.01, 0.03, -0.02, 0.02, 0.00],
+        ],
+        '30d': [
+          [0.00, 0.03, -0.02, 0.04, -0.03, 0.02],
+          [0.00, -0.02, 0.03, -0.03, 0.02, -0.01],
+          [0.00, 0.01, -0.01, 0.02, -0.02, 0.01],
+        ],
+      };
+
+      const base = baseMap[this.trendRange] || baseMap['24h'];
+      const pulseList = pulseMap[this.trendRange] || pulseMap['24h'];
+      const pulse = pulseList[this.chartRefreshTick % pulseList.length] || [];
+
+      const pondOffsetMap = {
+        'pond-1': { doOffset: 0.18, phOffset: -0.03 },
+        'pond-2': { doOffset: 0.0, phOffset: 0.0 },
+        'pond-3': { doOffset: -0.12, phOffset: 0.04 },
+      };
+      const pondOffset = pondOffsetMap[this.activePondId] || pondOffsetMap['pond-2'];
+
+      return {
+        xAxis: base.xAxis,
+        doValues: base.doBase.map((value, index) => Number((value + (pulse[index] || 0) + pondOffset.doOffset).toFixed(2))),
+        phValues: base.phBase.map((value, index) => Number((value + (pulse[index] || 0) * 0.08 + pondOffset.phOffset).toFixed(2))),
+      };
     },
     summaryCards() {
       if (this.userType === 'monitor') {
         return [
           {
+            title: '联网养殖池',
+            value: this.displayedRegulatorPonds.length,
+            description: `${this.activeRegulatorRegionLabel}内当前纳入监管的池塘数量`,
+          },
+          {
+            title: '高风险养殖池',
+            value: this.highRiskPondCount,
+            description: '建议优先安排现场抽检与复核',
+          },
+          {
             title: '待审批许可证',
             value: this.pendingPermitCount,
-            description: '待监管侧审核的养殖户申请数',
+            description: '待监管侧审核并反馈处理结果',
           },
           {
-            title: '已上链许可证',
-            value: this.approvedPermitCount,
-            description: '已审批并完成链上存证',
-          },
-          {
-            title: '水数据异常条数',
-            value: this.abnormalWaterCount,
-            description: '用于重点审查异常水质记录',
-          },
-          {
-            title: '待上链数据',
-            value: this.waterDataType === 'turbidity' ? this.selectedTurbidityRowKeys.length : this.selectedTdsRowKeys.length,
-            description: '当前勾选的批量上链数量',
+            title: '活跃预警事件',
+            value: this.activeRegulatorWarningCount,
+            description: '含水质超标、设备异常等重点事项',
           },
         ];
       }
 
       return [
         {
-          title: '许可证总数',
-          value: this.enterpriseTableData.length,
-          description: '养殖户已提交的许可证记录',
+          title: '核心监测指标',
+          value: this.farmerMetricCards.length,
+          description: '已纳入养殖户首页展示的关键水质项',
         },
         {
-          title: '待审批',
-          value: this.enterpriseTableData.filter((item) => item.status === 0).length,
-          description: '等待监管部门审核',
+          title: '当前预警',
+          value: this.farmerWarningCount,
+          description: '需尽快跟进处理的预警与风险提示',
         },
         {
-          title: '已上链',
+          title: '今日已上链',
+          value: this.todayChainCount,
+          description: '已形成链上留痕的业务记录条数',
+        },
+        {
+          title: '许可证通过',
           value: this.approvedPermitCount,
-          description: '通过审批并完成链上校验',
-        },
-        {
-          title: '不通过',
-          value: this.rejectedPermitCount,
-          description: '需补充材料后重新提交',
+          description: '已通过审批并可执行链上核验',
         },
       ];
     },
@@ -706,7 +1747,7 @@ export default {
       if (this.enterpriseTableData.length === 0) {
         return false;
       }
-      return this.enterpriseTableData.some((item) => item.status === 0 || item.status === 1);
+      return this.enterpriseTableData.some((item) => Number(item.status) === 0 || Number(item.status) === 1);
     },
   },
   watch: {
@@ -715,25 +1756,90 @@ export default {
         this.fetchWaterData();
       }
     },
+    trendRange() {
+      this.$nextTick(() => {
+        this.queueRenderWaterTrendChart();
+      });
+    },
+    farmerView(value) {
+      if (value === 'monitor') {
+        this.$nextTick(() => {
+          this.queueRenderWaterTrendChart();
+          this.startChartAutoRefresh();
+        });
+      } else {
+        this.stopChartAutoRefresh();
+      }
+    },
+    currentView(value) {
+      if (this.userType === 'monitor' && value === 'dashboard') {
+        this.$nextTick(() => {
+          this.queueRenderRegulatorChart();
+        });
+      }
+    },
+    activeRegulatorRegion() {
+      if (this.userType === 'monitor' && this.currentView === 'dashboard') {
+        this.$nextTick(() => {
+          this.queueRenderRegulatorChart();
+        });
+      }
+    },
     '$route.name'() {
       this.autoEnterByRoute();
     },
   },
   created() {
-    this.getAccountInfo();
+    this.setDefaultAccountInfo();
     this.autoEnterByRoute();
+  },
+  mounted() {
+    window.addEventListener('resize', this.handleWaterChartResize, false);
+    setTimeout(() => {
+      this.prefetchFarmingProcessPage();
+    }, 180);
+  },
+  beforeDestroy() {
+    this.stopChartAutoRefresh();
+    if (this.chartRenderRetryTimer) {
+      clearTimeout(this.chartRenderRetryTimer);
+      this.chartRenderRetryTimer = null;
+    }
+    if (this.regulatorChartRetryTimer) {
+      clearTimeout(this.regulatorChartRetryTimer);
+      this.regulatorChartRetryTimer = null;
+    }
+    window.removeEventListener('resize', this.handleWaterChartResize, false);
+    if (this.waterTrendChart) {
+      this.waterTrendChart.dispose();
+      this.waterTrendChart = null;
+    }
+    if (this.regulatorRegionChart) {
+      this.regulatorRegionChart.dispose();
+      this.regulatorRegionChart = null;
+    }
   },
   methods: {
     async initRoleWorkbench(userType) {
       this.currentLoginType = userType;
       this.userType = userType;
       this.currentUser = userType === 'enterprise' ? '养殖户用户' : '监管局用户';
-      this.currentView = 'approval';
+      this.currentView = userType === 'monitor' ? 'dashboard' : 'approval';
       await this.fetchPermissionList();
       if (userType === 'monitor') {
         await this.fetchWaterData();
       }
       this.isLoggedIn = true;
+      if (userType === 'enterprise') {
+        this.$nextTick(() => {
+          this.queueRenderWaterTrendChart();
+          this.startChartAutoRefresh();
+        });
+      } else {
+        this.$nextTick(() => {
+          this.queueRenderRegulatorChart();
+        });
+      }
     },
     async loginByCurrentSession(userType) {
       let userAccount = localStorage.getItem('platformUserAccount');
@@ -782,9 +1888,9 @@ export default {
         this.loading = false;
       }
 
-      this.$message.error('无法复用当前登录态进入该端口，请重新登录');
-      this.$router.replace('/login');
-      return false;
+      await this.initRoleWorkbench(userType);
+      this.$message.warning(`${userType === 'enterprise' ? '养殖户端' : '监管端'}接口暂不可用，已进入前端演示模式`);
+      return true;
     },
     async autoEnterByRoute() {
       const routeName = this.$route?.name;
@@ -869,6 +1975,529 @@ export default {
         return;
       }
     },
+    formatMetricLevel(level) {
+      const levelMap = {
+        normal: '正常',
+        warning: '预警',
+        danger: '危险',
+      };
+      return levelMap[level] || '关注';
+    },
+    formatWarningType(type) {
+      const typeMap = {
+        water_quality: '水质超标',
+        environment: '环境异常',
+        device_offline: '设备离线',
+        farming_noncompliance: '养殖规范异常',
+      };
+      return typeMap[type] || '风险提示';
+    },
+    async prefetchFarmingProcessPage() {
+      if (this._farmingProcessPrefetched) {
+        return;
+      }
+      try {
+        await import('@/pages/water/farming-process.vue');
+        this._farmingProcessPrefetched = true;
+      } catch (error) {
+        console.warn('预加载养殖过程页面失败:', error?.message || error);
+      }
+    },
+    async openFarmingProcess() {
+      if (this.farmingProcessLoading) {
+        return;
+      }
+      this.farmingProcessLoading = true;
+      try {
+        await this.prefetchFarmingProcessPage();
+        await this.$router.push('/water/breeding').catch(() => '');
+      } finally {
+        this.farmingProcessLoading = false;
+      }
+    },
+    openFarmerTraceability() {
+      const firstRecord = this.filteredTraceabilityTimeline[0];
+      if (firstRecord) {
+        this.selectedTraceabilityId = firstRecord.id;
+      }
+      this.switchFarmerView('traceability');
+    },
+    getChainActionType(item) {
+      const evidenceNo = item?.evidenceNo || '';
+      const title = item?.title || '';
+
+      if (evidenceNo.includes('BC-WATER') || title.includes('水质')) return '水质数据';
+      if (evidenceNo.includes('BC-FEED') || title.includes('投喂')) return '投喂记录';
+      if (evidenceNo.includes('BC-PERMIT') || title.includes('许可证')) return '许可证';
+      if (evidenceNo.includes('BC-SEED') || title.includes('苗种')) return '苗种投放';
+      if (evidenceNo.includes('BC-MED') || title.includes('用药')) return '用药记录';
+      if (evidenceNo.includes('BC-ALERT')) return '预警处置';
+      if (evidenceNo.includes('BC-MANUAL')) return '手动补录';
+      return '养殖留痕';
+    },
+    getChainHashSummary(item, index = 0) {
+      if (item?.hash) {
+        const hash = String(item.hash);
+        if (hash.length <= 22) return hash;
+        return `${hash.slice(0, 12)}...${hash.slice(-8)}`;
+      }
+
+      const source = `${item?.evidenceNo || item?.title || 'CHAIN'}-${index}`;
+      let hash = 0;
+      for (let i = 0; i < source.length; i += 1) {
+        hash = (hash * 33 + source.charCodeAt(i)) >>> 0;
+      }
+      return `0x${hash.toString(16).padStart(8, '0')}...`;
+    },
+    getTraceabilityQrImage(item, index = 0) {
+      const seed = Number(item?.id) || index || 0;
+      return TRACEABILITY_QR_IMAGES[Math.abs(seed) % TRACEABILITY_QR_IMAGES.length];
+    },
+    switchFarmerView(view) {
+      this.farmerView = view;
+      this.$nextTick(() => {
+        const target = this.$refs.farmerCenterCard?.$el || this.$refs.farmerCenterCard;
+        if (target?.scrollIntoView) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        if (view === 'monitor') {
+          this.queueRenderWaterTrendChart();
+          this.startChartAutoRefresh();
+        } else {
+          this.stopChartAutoRefresh();
+        }
+      });
+    },
+    handleFarmerTabChange(value) {
+      this.farmerView = value;
+      if (value === 'monitor') {
+        this.$nextTick(() => {
+          this.queueRenderWaterTrendChart();
+          this.startChartAutoRefresh();
+        });
+      } else {
+        this.stopChartAutoRefresh();
+      }
+    },
+    queueRenderWaterTrendChart(delay = 80) {
+      if (this.chartRenderRetryTimer) {
+        clearTimeout(this.chartRenderRetryTimer);
+      }
+      this.chartRenderRetryTimer = setTimeout(() => {
+        this.renderWaterTrendChart();
+      }, delay);
+    },
+    queueRenderRegulatorChart(delay = 80) {
+      if (this.regulatorChartRetryTimer) {
+        clearTimeout(this.regulatorChartRetryTimer);
+      }
+      this.regulatorChartRetryTimer = setTimeout(() => {
+        this.renderRegulatorChart();
+      }, delay);
+    },
+    handleWaterChartResize() {
+      if (this.waterTrendChart) {
+        this.waterTrendChart.resize();
+      }
+      if (this.regulatorRegionChart) {
+        this.regulatorRegionChart.resize();
+      }
+    },
+    switchRegulatorView(view) {
+      this.currentView = view;
+      if (view === 'dashboard') {
+        this.$nextTick(() => {
+          this.queueRenderRegulatorChart();
+        });
+      }
+    },
+    startChartAutoRefresh() {
+      this.stopChartAutoRefresh();
+      if (this.userType !== 'enterprise' || this.farmerView !== 'monitor' || this.trendRange !== '24h') {
+        return;
+      }
+      this.chartRefreshTimer = setInterval(() => {
+        this.chartRefreshTick += 1;
+        this.renderWaterTrendChart();
+      }, 3500);
+    },
+    stopChartAutoRefresh() {
+      if (this.chartRefreshTimer) {
+        clearInterval(this.chartRefreshTimer);
+        this.chartRefreshTimer = null;
+      }
+    },
+    renderWaterTrendChart() {
+      if (this.userType !== 'enterprise' || this.farmerView !== 'monitor') {
+        return;
+      }
+      const container = this.$refs.waterTrendChartRef;
+      if (!container) {
+        return;
+      }
+      if (!container.clientWidth || !container.clientHeight) {
+        this.queueRenderWaterTrendChart(160);
+        return;
+      }
+
+      this.waterTrendChart = echarts.getInstanceByDom(container) || echarts.init(container);
+
+      const trendData = this.monitorTrendData;
+      this.waterTrendChart.setOption({
+        animationDuration: 900,
+        animationEasing: 'cubicOut',
+        color: ['#1f74d8', '#00a870'],
+        tooltip: { trigger: 'axis' },
+        legend: {
+          right: 14,
+          top: 4,
+          itemWidth: 18,
+          itemGap: 18,
+          textStyle: { color: '#4f6780', padding: [0, 4, 0, 4] },
+        },
+        grid: { left: 48, right: 60, top: 56, bottom: 28 },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: trendData.xAxis,
+          axisLine: { lineStyle: { color: '#d6e4f0' } },
+          axisLabel: { color: '#6a7f95' },
+        },
+        yAxis: [
+          {
+            type: 'value',
+            name: '溶解氧',
+            min: 3.5,
+            max: 6.2,
+            axisLine: { show: false },
+            splitLine: { lineStyle: { color: '#edf3f9' } },
+            axisLabel: { color: '#6a7f95', formatter: '{value}' },
+          },
+          {
+            type: 'value',
+            name: 'pH',
+            position: 'right',
+            min: 7.8,
+            max: 8.3,
+            splitLine: { show: false },
+            axisLabel: { color: '#6a7f95', formatter: '{value}' },
+          },
+        ],
+        series: [
+          {
+            name: '溶解氧',
+            type: 'line',
+            smooth: 0.16,
+            yAxisIndex: 0,
+            symbol: 'circle',
+            symbolSize: 7,
+            lineStyle: { width: 3 },
+            data: trendData.doValues,
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(31, 116, 216, 0.28)' },
+                { offset: 1, color: 'rgba(31, 116, 216, 0.03)' },
+              ]),
+            },
+            markLine: {
+              symbol: 'none',
+              label: { color: '#1f74d8' },
+              lineStyle: { type: 'dashed', color: '#1f74d8' },
+              data: [{ yAxis: 5, name: 'DO警戒线' }],
+            },
+          },
+          {
+            name: 'pH',
+            type: 'line',
+            smooth: 0.12,
+            yAxisIndex: 1,
+            symbol: 'circle',
+            symbolSize: 6,
+            lineStyle: { width: 3 },
+            data: trendData.phValues,
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(0, 168, 112, 0.20)' },
+                { offset: 1, color: 'rgba(0, 168, 112, 0.03)' },
+              ]),
+            },
+          },
+        ],
+      }, true);
+      this.waterTrendChart.resize();
+    },
+    renderRegulatorChart() {
+      if (this.userType !== 'monitor' || this.currentView !== 'dashboard') {
+        return;
+      }
+      const container = this.$refs.regulatorRegionChartRef;
+      if (!container) {
+        return;
+      }
+      if (!container.clientWidth || !container.clientHeight) {
+        this.queueRenderRegulatorChart(160);
+        return;
+      }
+
+      this.regulatorRegionChart = echarts.getInstanceByDom(container) || echarts.init(container);
+      const chartData = this.regulatorRegionChartData;
+
+      this.regulatorRegionChart.setOption({
+        animationDuration: 900,
+        animationEasing: 'cubicOut',
+        color: ['#1f74d8', '#ff9f43'],
+        tooltip: { trigger: 'axis' },
+        legend: {
+          right: 14,
+          top: 4,
+          itemGap: 18,
+          textStyle: { color: '#4f6780' },
+        },
+        grid: { left: 44, right: 50, top: 52, bottom: 28 },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: chartData.xAxis,
+          axisLine: { lineStyle: { color: '#d6e4f0' } },
+          axisLabel: { color: '#6a7f95' },
+        },
+        yAxis: [
+          {
+            type: 'value',
+            name: '综合评分',
+            min: 60,
+            max: 100,
+            splitLine: { lineStyle: { color: '#edf3f9' } },
+            axisLabel: { color: '#6a7f95' },
+          },
+          {
+            type: 'value',
+            name: '预警数',
+            position: 'right',
+            minInterval: 1,
+            splitLine: { show: false },
+            axisLabel: { color: '#6a7f95' },
+          },
+        ],
+        series: [
+          {
+            name: '综合评分',
+            type: 'line',
+            smooth: 0.2,
+            yAxisIndex: 0,
+            symbol: 'circle',
+            symbolSize: 7,
+            lineStyle: { width: 3 },
+            data: chartData.scoreValues,
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(31, 116, 216, 0.20)' },
+                { offset: 1, color: 'rgba(31, 116, 216, 0.03)' },
+              ]),
+            },
+          },
+          {
+            name: '预警数量',
+            type: 'line',
+            smooth: 0.1,
+            yAxisIndex: 1,
+            symbol: 'circle',
+            symbolSize: 6,
+            lineStyle: { width: 3, type: 'dashed' },
+            data: chartData.warningValues,
+          },
+        ],
+      }, true);
+      this.regulatorRegionChart.resize();
+    },
+    formatNow() {
+      return new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+    },
+    normalizeImageUrl(url) {
+      if (!url) {
+        return MOCK_PERMIT_IMAGE;
+      }
+      if (String(url).startsWith('http') || String(url).startsWith('data:')) {
+        return url;
+      }
+      return `${this.$API_BASE_URL}${url}`;
+    },
+    getMockPermissionRecords() {
+      return [
+        { id: 101, companyName: '蓝海一号养殖场', permitImage: MOCK_PERMIT_IMAGE, imageUrl: MOCK_PERMIT_IMAGE, status: 0, createTime: '2026-04-06 09:12:00' },
+        { id: 102, companyName: '滨海虾贝联合社', permitImage: MOCK_PERMIT_IMAGE, imageUrl: MOCK_PERMIT_IMAGE, status: 1, createTime: '2026-04-05 17:36:00' },
+        { id: 103, companyName: '澄海生态养殖合作社', permitImage: MOCK_PERMIT_IMAGE, imageUrl: MOCK_PERMIT_IMAGE, status: 2, createTime: '2026-04-05 14:18:00' },
+        { id: 104, companyName: '南堤智慧工厂化基地', permitImage: MOCK_PERMIT_IMAGE, imageUrl: MOCK_PERMIT_IMAGE, status: 1, createTime: '2026-04-05 16:22:00' },
+      ];
+    },
+    getMockWaterRows(type = 'turbidity') {
+      return this.regulatorPondSnapshots.map((item, index) => {
+        if (type === 'turbidity') {
+          const value = [18, 22, 16, 27, 21, 15][index] || 18;
+          return {
+            id: 301 + index,
+            userId: this.regulatorFarmerProfiles.find((profile) => profile.companyName === item.companyName)?.accountId || `COMP-${1001 + index}`,
+            companyName: item.companyName,
+            regionCode: item.regionCode,
+            region: item.region,
+            pondName: item.pondName,
+            data: `${value} NTU`,
+            time: `2026-04-06 ${String(10 - Math.floor(index / 2)).padStart(2, '0')}:${index % 2 === 0 ? '12' : '48'}:00`,
+            status: value <= 20 ? '正常' : '异常',
+            onChain: index % 2 === 0,
+          };
+        }
+
+        const value = [32650, 38200, 33480, 29800, 34120, 33680][index] || 32650;
+        return {
+          id: 401 + index,
+          userId: this.regulatorFarmerProfiles.find((profile) => profile.companyName === item.companyName)?.accountId || `COMP-${1001 + index}`,
+          companyName: item.companyName,
+          regionCode: item.regionCode,
+          region: item.region,
+          pondName: item.pondName,
+          data: `${value} mg/L`,
+          time: `2026-04-06 ${String(10 - Math.floor(index / 2)).padStart(2, '0')}:${index % 2 === 0 ? '10' : '45'}:00`,
+          status: value >= 30000 && value <= 38000 ? '正常' : '异常',
+          onChain: index % 2 === 0,
+        };
+      });
+    },
+    applyMockPermissionList() {
+      const list = this.getMockPermissionRecords();
+      if (this.userType === 'enterprise') {
+        this.enterpriseTableData = list.slice(0, 2);
+      } else {
+        this.monitorTableData = list;
+      }
+    },
+    enrichWaterRows(rows, type = 'turbidity') {
+      return (rows || []).map((row, index) => {
+        const fallbackProfile = this.regulatorFarmerProfiles[index % this.regulatorFarmerProfiles.length] || {};
+        const profile = this.regulatorFarmerProfiles.find((item) => item.accountId === row.userId || item.companyName === row.companyName) || fallbackProfile;
+        const snapshot = this.regulatorPondSnapshots.find((item) => item.companyName === profile.companyName) || {};
+        const valueText = String(row.data ?? row.value ?? '--');
+        const numericValue = Number(String(valueText).replace(/[^\d.\-]/g, ''));
+        const derivedStatus = type === 'turbidity'
+          ? (numericValue <= 20 ? '正常' : '异常')
+          : (numericValue >= 30000 && numericValue <= 38000 ? '正常' : '异常');
+
+        return {
+          ...row,
+          userId: row.userId || profile.accountId || `COMP-${1001 + index}`,
+          companyName: row.companyName || profile.companyName || `养殖主体-${index + 1}`,
+          regionCode: row.regionCode || profile.regionCode || snapshot.regionCode || 'east',
+          region: row.region || profile.region || snapshot.region || '默认片区',
+          pondName: row.pondName || snapshot.pondName || `${profile.companyName || '养殖主体'}-示范池`,
+          data: valueText,
+          time: row.time || row.createTime || this.formatNow(),
+          status: row.status || derivedStatus,
+          onChain: Boolean(row.onChain),
+        };
+      });
+    },
+    applyMockWaterData(type) {
+      const rows = this.getMockWaterRows(type);
+      if (type === 'turbidity') {
+        this.turbidityTableData = rows;
+        this.turbidityPagination.total = rows.length;
+        return;
+      }
+      this.tdsTableData = rows;
+      this.tdsPagination.total = rows.length;
+    },
+    getMetricSuggestion(metricCode, level) {
+      if (level === 'danger') {
+        return '已进入危险区间，建议立即排查并采取处置措施。';
+      }
+      if (level === 'warning') {
+        if (metricCode === 'DO') return '建议及时开启增氧设备，并在夜间加强巡检。';
+        if (metricCode === 'NITRITE') return '建议局部换水并复测，防止继续上升。';
+        if (metricCode === 'AMMONIA_N') return '建议控制投喂量并检查底质。';
+        return '建议尽快复测，并结合现场情况处理。';
+      }
+      return '指标处于正常范围，可继续保持当前养殖管理。';
+    },
+    showPondAddTip() {
+      this.$message.info('当前为前端展示版，新增养殖池入口样式已预留。');
+    },
+    showManualEntryDialog() {
+      this.manualEntryDialogVisible = true;
+    },
+    resetManualEntryForm() {
+      this.manualEntryDialogVisible = false;
+      this.manualEntryForm = {
+        metricCode: 'DO',
+        value: '',
+        remark: '',
+      };
+    },
+    handleManualEntrySubmit() {
+      const { metricCode, value, remark } = this.manualEntryForm;
+      const rule = WATER_DATA_TYPES.find((item) => item.metricCode === metricCode);
+      const numericValue = Number(value);
+
+      if (!rule) {
+        this.$message.warning('请选择指标类型');
+        return;
+      }
+      if (!Number.isFinite(numericValue)) {
+        this.$message.warning('请输入有效的检测值');
+        return;
+      }
+
+      const level = getWaterMetricLevel(metricCode, numericValue);
+      const levelText = this.formatMetricLevel(level);
+      const suggestion = remark || this.getMetricSuggestion(metricCode, level);
+
+      this.monitorRecords.unshift({
+        id: Date.now(),
+        pondId: this.activePondId,
+        pondName: this.activePondLabel,
+        time: this.formatNow(),
+        metricCode,
+        metricLabel: rule.label,
+        valueText: `${numericValue} ${rule.unit}`.trim(),
+        sourceText: '人工补录',
+        levelText,
+        theme: METRIC_LEVEL_THEME[level] || 'primary',
+        suggestion,
+      });
+
+      const targetMetric = this.farmerMetrics.find((item) => item.metricCode === metricCode);
+      if (targetMetric) {
+        targetMetric.value = numericValue;
+        targetMetric.tip = suggestion;
+      }
+
+      if (level !== 'normal') {
+        this.warningTodoList.unshift({
+          id: Date.now() + 1,
+          pondId: this.activePondId,
+          pondName: this.activePondLabel,
+          title: `${rule.label}人工补录触发${levelText}`,
+          type: 'water_quality',
+          level,
+          levelText,
+          theme: METRIC_LEVEL_THEME[level] || 'warning',
+          time: '刚刚',
+          detail: `${rule.label}检测值为 ${numericValue}${rule.unit}，${suggestion}`,
+        });
+      }
+
+      this.traceabilityTimeline.unshift({
+        id: Date.now() + 2,
+        pondId: this.activePondId,
+        pondName: this.activePondLabel,
+        title: `${rule.label}补录记录已生成存证任务`,
+        time: '刚刚',
+        evidenceNo: `BC-MANUAL-${Date.now()}`,
+        onChain: level === 'normal',
+      });
+
+      this.$message.success(`已补录 ${rule.label} 数据，并完成阈值判定`);
+      this.resetManualEntryForm();
+    },
     showApplyDialog() {
       this.dialogVisible = true;
       this.applyForm = {
@@ -909,19 +2538,26 @@ export default {
           response = await queryPermissionByManager();
         }
 
-        if (response.code === 0) {
-          const list = (response.data || []).map((item) => ({
+        if (response.code === 0 && Array.isArray(response.data) && response.data.length) {
+          const list = response.data.map((item, index) => ({
             ...item,
-            permitImage: this.$API_BASE_URL + item.imageUrl,
+            id: item.id || index + 1,
+            companyName: item.companyName || `养殖主体-${index + 1}`,
+            status: Number(item.status ?? 0),
+            permitImage: this.normalizeImageUrl(item.imageUrl || item.permitImage),
           }));
           if (this.userType === 'enterprise') {
             this.enterpriseTableData = list;
           } else {
             this.monitorTableData = list;
           }
+          return;
         }
+
+        this.applyMockPermissionList();
       } catch (error) {
-        this.$message.error('获取许可证列表失败');
+        console.error('获取许可证列表失败，已切换为演示数据:', error);
+        this.applyMockPermissionList();
       }
     },
     async handleApprove(row) {
@@ -1040,17 +2676,31 @@ export default {
     onTdsSelectChange(selectedRowKeys, selectedRows) {
       this.selectedTdsRowKeys = selectedRows.selectedRowData.filter((item) => item && !item.onChain).map((item) => item.id);
     },
+    setDefaultAccountInfo() {
+      const platformRole = localStorage.getItem('platformUserRole') || '';
+      const platformAccount = localStorage.getItem('platformUserAccount') || '';
+      const platformPassword = localStorage.getItem('platformUserPassword') || '123456';
+
+      this.enterpriseAccount = this.enterpriseAccount || (platformRole === 'company' ? (platformAccount || 'farmer_demo') : 'farmer_demo');
+      this.enterprisePassword = this.enterprisePassword || platformPassword;
+      this.enterpriseBlockchainAddress = this.enterpriseBlockchainAddress || '0xFARMER-DEMO-001';
+
+      this.monitorAccount = this.monitorAccount || (platformRole === 'manager' ? (platformAccount || 'manager_demo') : 'manager_demo');
+      this.monitorPassword = this.monitorPassword || platformPassword;
+      this.monitorBlockchainAddress = this.monitorBlockchainAddress || '0xMANAGER-DEMO-001';
+    },
     async getAccountInfo() {
       try {
         const { data } = await getStepOneData();
-        this.enterpriseAccount = data.companyAccount;
-        this.enterprisePassword = data.companyPassword;
-        this.enterpriseBlockchainAddress = data.companyAddress;
-        this.monitorAccount = data.managerAccount;
-        this.monitorPassword = data.managerPassword;
-        this.monitorBlockchainAddress = data.managerAddress;
+        this.enterpriseAccount = data.companyAccount || this.enterpriseAccount;
+        this.enterprisePassword = data.companyPassword || this.enterprisePassword;
+        this.enterpriseBlockchainAddress = data.companyAddress || this.enterpriseBlockchainAddress;
+        this.monitorAccount = data.managerAccount || this.monitorAccount;
+        this.monitorPassword = data.managerPassword || this.monitorPassword;
+        this.monitorBlockchainAddress = data.managerAddress || this.monitorBlockchainAddress;
       } catch (error) {
-        console.error('获取账号信息失败:', error);
+        this.setDefaultAccountInfo();
+        console.warn('获取账号信息失败，已切换为本地演示账号信息:', error?.message || error);
       }
     },
     onTurbidityPageChange(current) {
@@ -1078,12 +2728,15 @@ export default {
           pageNum: this.turbidityPagination.current,
           pageSize: this.turbidityPagination.pageSize,
         });
-        if (response.code === 0) {
-          this.turbidityTableData = response.data;
-          this.turbidityPagination.total = Number(response.total);
+        if (response.code === 0 && Array.isArray(response.data) && response.data.length) {
+          this.turbidityTableData = this.enrichWaterRows(response.data, 'turbidity');
+          this.turbidityPagination.total = Number(response.total || response.data.length);
+          return;
         }
+        this.applyMockWaterData('turbidity');
       } catch (error) {
-        this.$message.error('获取浑浊度数据失败');
+        console.error('获取浑浊度数据失败，已切换为演示数据:', error);
+        this.applyMockWaterData('turbidity');
       }
     },
     async fetchTdsData() {
@@ -1093,12 +2746,15 @@ export default {
           pageNum: this.tdsPagination.current,
           pageSize: this.tdsPagination.pageSize,
         });
-        if (response.code === 0) {
-          this.tdsTableData = response.data;
-          this.tdsPagination.total = Number(response.total);
+        if (response.code === 0 && Array.isArray(response.data) && response.data.length) {
+          this.tdsTableData = this.enrichWaterRows(response.data, 'tds');
+          this.tdsPagination.total = Number(response.total || response.data.length);
+          return;
         }
+        this.applyMockWaterData('tds');
       } catch (error) {
-        this.$message.error('获取 TDS 数据失败');
+        console.error('获取 TDS 数据失败，已切换为演示数据:', error);
+        this.applyMockWaterData('tds');
       }
     },
     isRowDisabled(row) {
@@ -1238,6 +2894,561 @@ export default {
   }
 }
 
+.pond-switcher {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+
+  &__label {
+    font-size: 13px;
+    color: #5e738a;
+    font-weight: 600;
+  }
+}
+
+.pond-add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px dashed #7fb3ff;
+  background: rgba(31, 116, 216, 0.06);
+  color: #1f74d8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(31, 116, 216, 0.12);
+    border-color: #4b95ff;
+  }
+
+  &__icon {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+  }
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-card-mini {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--marine-divider);
+  background: linear-gradient(180deg, #f8fbff 0%, #eff7ff 100%);
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #4f6780;
+    font-size: 13px;
+  }
+
+  &__value {
+    margin: 10px 0 8px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #12314d;
+
+    small {
+      margin-left: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #5e738a;
+    }
+  }
+
+  &__meta {
+    font-size: 12px;
+    color: #5e738a;
+  }
+
+  &__desc {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #6a7f95;
+  }
+}
+
+.farmer-section-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.farmer-subpanel {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--marine-divider);
+  background: #fbfdff;
+
+  &__title {
+    margin-bottom: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #12314d;
+  }
+}
+
+.warning-item,
+.ledger-item,
+.trace-item,
+.threshold-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--marine-divider);
+
+  &:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+.warning-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #12314d;
+  font-weight: 600;
+}
+
+.warning-item__time {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6a7f95;
+}
+
+.warning-item__desc {
+  margin-top: 6px;
+  line-height: 1.7;
+  color: #4f6780;
+}
+
+.ledger-item__title,
+.threshold-item__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #12314d;
+}
+
+.threshold-list {
+  display: grid;
+}
+
+.threshold-item__range {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #5e738a;
+
+  &.danger {
+    color: #c64751;
+  }
+}
+
+.trace-list {
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+.trace-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trace-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.trace-item__aside {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.trace-item__qr {
+  width: 56px;
+  height: 56px;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(31, 116, 216, 0.18);
+  background: #fff;
+  object-fit: cover;
+  box-shadow: 0 8px 16px rgba(31, 116, 216, 0.08);
+}
+
+.trace-item__qr--clickable {
+  cursor: zoom-in;
+}
+
+.trace-item__qr-text {
+  font-size: 12px;
+  color: #6a7f95;
+  white-space: nowrap;
+}
+
+
+.traceability-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.3fr);
+  gap: 16px;
+}
+
+.traceability-records-panel {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--marine-divider);
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.traceability-record-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.traceability-record-card {
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--marine-divider);
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: rgba(31, 116, 216, 0.28);
+    box-shadow: 0 10px 24px rgba(31, 116, 216, 0.08);
+  }
+
+  &.active {
+    border-color: #6ba3f5;
+    background: linear-gradient(180deg, rgba(239, 247, 255, 0.96) 0%, rgba(255, 255, 255, 1) 100%);
+    box-shadow: 0 12px 28px rgba(31, 116, 216, 0.10);
+  }
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    color: #12314d;
+    font-weight: 600;
+  }
+
+  &__meta,
+  &__hash {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6a7f95;
+  }
+
+  &__hash {
+    font-family: 'Consolas', 'Courier New', monospace;
+    color: #1d4f79;
+  }
+
+  &__qr-box {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #5f738a;
+  }
+
+  &__qr {
+    width: 52px;
+    height: 52px;
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid rgba(31, 116, 216, 0.18);
+    background: #fff;
+    object-fit: cover;
+  }
+
+  &__qr--clickable {
+    cursor: zoom-in;
+  }
+}
+
+.traceability-certificate-panel {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(31, 116, 216, 0.24);
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(255, 255, 255, 1) 100%);
+  box-shadow: 0 14px 32px rgba(31, 116, 216, 0.08);
+}
+
+.certificate-head {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.certificate-emblem {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #82aef0;
+  color: #6b9be6;
+  font-size: 28px;
+  background: rgba(31, 116, 216, 0.08);
+}
+
+.certificate-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #6b9be6;
+}
+
+.certificate-subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #7c90a6;
+}
+
+.certificate-sheet {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--marine-divider);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.certificate-row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  border-bottom: 1px solid var(--marine-divider);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.certificate-label {
+  padding: 14px 16px;
+  background: rgba(238, 247, 255, 0.9);
+  color: #425b77;
+  font-weight: 600;
+}
+
+.certificate-value {
+  padding: 14px 16px;
+  color: #12314d;
+  line-height: 1.75;
+
+  &.hash {
+    font-family: 'Consolas', 'Courier New', monospace;
+    color: #4f6780;
+    word-break: break-all;
+  }
+}
+
+.certificate-scan-panel {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px dashed rgba(31, 116, 216, 0.24);
+  background: rgba(239, 247, 255, 0.6);
+}
+
+.certificate-scan-panel__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #12314d;
+}
+
+.certificate-scan-panel__desc {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #6a7f95;
+}
+
+.certificate-scan-panel__qr {
+  width: 88px;
+  height: 88px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(31, 116, 216, 0.18);
+  background: #fff;
+  object-fit: cover;
+  box-shadow: 0 10px 22px rgba(31, 116, 216, 0.08);
+}
+
+.certificate-scan-panel__qr--clickable {
+  cursor: zoom-in;
+}
+
+.certificate-verify-bar {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 54px;
+  border-radius: 14px;
+  background: rgba(0, 168, 112, 0.12);
+  color: #158a58;
+  font-size: 18px;
+  font-weight: 600;
+
+  &.pending {
+    background: rgba(237, 166, 28, 0.14);
+    color: #b47416;
+  }
+
+  &__icon {
+    font-size: 20px;
+    font-weight: 700;
+  }
+}
+
+.chain-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.chain-hash-text {
+  font-family: 'Consolas', 'Courier New', monospace;
+  color: #1d4f79;
+}
+
+.monitor-toolbar {
+  align-items: center;
+}
+
+.monitor-chart-panel {
+  margin-bottom: 16px;
+  padding: 16px 18px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--marine-divider);
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(255, 255, 255, 1) 100%);
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 6px;
+  }
+}
+
+.monitor-chart-legend-tip {
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #6a7f95;
+}
+
+.water-trend-chart {
+  width: 100%;
+  height: 320px;
+}
+
+.trend-summary-grid,
+.warning-center-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.trend-summary-item,
+.warning-center-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--marine-divider);
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.regulator-insight-grid,
+.regulator-pond-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.regulator-insight-grid {
+  margin-bottom: 16px;
+}
+
+.regulator-overview-card,
+.regulator-pond-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--marine-divider);
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.regulator-pond-card__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+
+  span {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(31, 116, 216, 0.08);
+    color: #1d4f79;
+    font-size: 12px;
+  }
+}
+
+.regulator-warning-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.regulator-trace-list {
+  margin-top: 12px;
+}
+
+.regulator-trace-item,
+.regulator-mini-trace {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--marine-divider);
+
+  &:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+.regulator-mini-panel {
+  margin-top: 14px;
+}
+
+.regulator-trend-chart {
+  height: 300px;
+}
+
 .panel-card {
   width: 100%;
   height: 100%;
@@ -1260,6 +3471,10 @@ export default {
   margin-bottom: 12px;
   color: #5e738a;
   font-size: 13px;
+
+  &.compact {
+    margin: 4px 0 0;
+  }
 }
 
 .info-panel {
@@ -1417,6 +3632,33 @@ export default {
 
   .hero-main h1 {
     font-size: 28px;
+  }
+
+  .metric-grid,
+  .farmer-section-grid,
+  .trend-summary-grid,
+  .warning-center-grid,
+  .regulator-insight-grid,
+  .regulator-pond-grid,
+  .regulator-warning-grid,
+  .traceability-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .monitor-chart-panel__header,
+  .trace-item,
+  .chain-panel-header,
+  .traceability-record-card__head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .certificate-row {
+    grid-template-columns: 1fr;
+  }
+
+  .water-trend-chart {
+    height: 260px;
   }
 
   .summary-row > .t-col,

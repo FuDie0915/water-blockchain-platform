@@ -4,24 +4,36 @@
       <section class="brand-panel ocean-card">
         <div class="brand-badge">海洋环保 · 区块链可信监管</div>
         <h1 class="brand-title">海链卫蓝</h1>
-        <p class="brand-subtitle">基于区块链的海水养殖可信水质监管平台</p>
+        <p class="brand-subtitle">海水养殖可信水质监管平台</p>
+        <p class="brand-note">登录后将按角色自动进入对应工作台，流程更直接、更清晰。</p>
 
-        <div class="brand-intro">
-          聚合首页看板、水质许可证审批、链上存证和 AI 助手，为多角色业务场景提供统一入口。
+        <div class="brand-points">
+          <span class="brand-point">可信留痕</span>
+          <span class="brand-point">实时预警</span>
+          <span class="brand-point">多角色协同</span>
         </div>
 
-        <div class="feature-list">
-          <div class="feature-item">
-            <strong>平台总览</strong>
-            <span>特殊平台账号登录后会自动进入总览页，统一查看区块链全局态势。</span>
+        <div class="quick-guide">
+          <div class="quick-guide__item">
+            <span class="quick-guide__index">01</span>
+            <div>
+              <strong>选择身份</strong>
+              <p>支持管理员、养殖户、监管端独立登录。</p>
+            </div>
           </div>
-          <div class="feature-item">
-            <strong>养殖户端</strong>
-            <span>用于许可证申报、材料上传、链上校验与进度追踪。</span>
+          <div class="quick-guide__item">
+            <span class="quick-guide__index">02</span>
+            <div>
+              <strong>输入账号</strong>
+              <p>使用对应角色账号完成登录或开户注册。</p>
+            </div>
           </div>
-          <div class="feature-item">
-            <strong>监管端</strong>
-            <span>用于审批许可证、查看水质数据、执行监管核验与处置。</span>
+          <div class="quick-guide__item">
+            <span class="quick-guide__index">03</span>
+            <div>
+              <strong>进入工作台</strong>
+              <p>系统自动跳转到各自的业务控制页面。</p>
+            </div>
           </div>
         </div>
       </section>
@@ -30,8 +42,8 @@
         <div class="panel-header">
           <div>
             <div class="panel-tag">{{ currentPanelTag }}</div>
-            <h2>{{ type === 'register' ? '创建角色账号' : '选择登录端口' }}</h2>
-            <p>养殖户与监管端支持独立登录/注册，登录成功后将自动进入对应角色控制台。</p>
+            <h2>{{ type === 'register' ? '创建角色账号' : '欢迎登录' }}</h2>
+            <p>{{ panelDescription }}</p>
           </div>
         </div>
 
@@ -53,7 +65,15 @@
           >
             {{ type === 'register' ? '监管端注册' : '监管端登录' }}
           </button>
+          <button
+            v-if="type === 'login'"
+            :class="['role-option', 'role-option--admin', { active: activeRole === 'admin' }]"
+            @click="selectLoginRole('admin')"
+          >
+            管理员登录
+          </button>
         </div>
+        <div v-if="type === 'register'" class="role-switch__hint">管理员账号由平台统一创建，此处仅开放养殖户与监管端注册。</div>
 
         <login v-if="type === 'login'" :role="loginRole" />
         <register v-else :role="registerRole" @register-success="handleRegisterSuccess" />
@@ -90,9 +110,20 @@ export default {
         return this.registerRole === 'manager' ? '监管端开户注册' : '养殖户开户注册';
       }
 
-      if (this.loginRole === 'admin') return '平台总览入口';
+      if (this.loginRole === 'admin') return '管理员登录入口';
       if (this.loginRole === 'manager') return '监管端登录入口';
       return '养殖户登录入口';
+    },
+    panelDescription() {
+      if (this.type === 'register') {
+        return '当前仅开放养殖户与监管端开户注册，管理员账号由平台统一分配。';
+      }
+
+      if (this.loginRole === 'admin') {
+        return '管理员登录后将直接进入平台总览、权限配置与系统管理中心。';
+      }
+
+      return '请选择角色后继续登录，系统会自动进入对应的业务控制台。';
     },
   },
   methods: {

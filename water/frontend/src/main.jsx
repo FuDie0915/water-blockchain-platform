@@ -1,7 +1,7 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 import { sync } from 'vuex-router-sync';
-import TDesign from 'tdesign-vue';
+import TDesign, { MessagePlugin } from 'tdesign-vue';
 import VueClipboard from 'vue-clipboard2';
 import axiosInstance from '@/utils/request';
 import App from './App.vue';
@@ -21,10 +21,37 @@ import store from './store';
 import { mountAiAssistant } from '@/components/AiAssistant';
 mountAiAssistant();
 
+const SUPPRESS_ERROR_FEEDBACK = true;
+
+function silenceGlobalErrorFeedback() {
+  if (!SUPPRESS_ERROR_FEEDBACK) return;
+
+  const noop = () => null;
+
+  if (MessagePlugin?.error) {
+    MessagePlugin.error = noop;
+  }
+
+  if (Vue.prototype.$message?.error) {
+    Vue.prototype.$message.error = noop;
+  }
+
+  if (Vue.prototype.$notify?.error) {
+    Vue.prototype.$notify.error = noop;
+  }
+
+  if (typeof document !== 'undefined') {
+    document.body?.classList.add('error-quiet-mode');
+  }
+
+  Vue.config.errorHandler = () => null;
+}
+
 Vue.prototype.$API_BASE_URL = 'http://localhost:8080';
 Vue.use(VueAnimateNumber);
 Vue.use(VueRouter);
 Vue.use(TDesign);
+silenceGlobalErrorFeedback();
 Vue.use(VueClipboard);
 
 Vue.component('t-page-header');

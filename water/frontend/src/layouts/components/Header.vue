@@ -46,7 +46,7 @@
               <template #icon>
                 <user-circle-icon class="header-user-avatar" />
               </template>
-              <div class="header-user-account">admin</div>
+              <div class="header-user-account">{{ currentUserLabel }}</div>
               <template #suffix>
                 <chevron-down-icon />
               </template>
@@ -152,6 +152,21 @@ export default Vue.extend({
           [`${this.prefix}-header-menu-fixed-side-compact`]: this.layout === 'side' && this.isFixed && this.isCompact,
         },
       ];
+    },
+    currentUserLabel() {
+      const userInfo = this.$store.state.user?.userInfo || {};
+      const account = localStorage.getItem('platformUserAccount') || userInfo.userAccount || userInfo.name || '';
+      const role = localStorage.getItem('platformUserRole') || userInfo.userRole || '';
+      const roleMap = {
+        admin: '系统管理员',
+        manager: '监管账号',
+        company: '养殖户',
+      };
+
+      if (account) {
+        return account;
+      }
+      return roleMap[role] || '未登录';
     },
   },
   methods: {

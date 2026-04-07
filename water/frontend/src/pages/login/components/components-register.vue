@@ -7,13 +7,8 @@
     label-width="0"
     @submit="onSubmit"
   >
-    <div class="register-role-tip">
-      <span>当前注册角色</span>
-      <strong>{{ roleText }}</strong>
-    </div>
-
     <t-form-item name="userAccount">
-      <t-input v-model="formData.userAccount" size="large" placeholder="请输入注册账号">
+      <t-input v-model="formData.userAccount" size="large" :placeholder="accountPlaceholder">
         <template #prefix-icon>
           <user-icon />
         </template>
@@ -56,10 +51,8 @@
       </t-input>
     </t-form-item>
 
-    <div class="register-tip">{{ registerTip }}</div>
-
     <t-form-item>
-      <t-button block size="large" type="submit" theme="primary" :loading="submitting">注册{{ roleText }}</t-button>
+      <t-button block size="large" type="submit" theme="primary" :loading="submitting">立即注册{{ roleText }}</t-button>
     </t-form-item>
   </t-form>
 </template>
@@ -112,10 +105,13 @@ export default Vue.extend({
     roleText() {
       return ROLE_TEXT_MAP[this.role] || '当前角色';
     },
+    accountPlaceholder() {
+      return this.role === 'manager' ? '请输入监管端注册账号' : '请输入养殖户注册账号';
+    },
     registerTip() {
       return this.role === 'manager'
-        ? '监管端账号注册成功后，可直接登录并进入监管控制台。'
-        : '养殖户账号注册成功后，可直接登录并进入养殖户控制台。';
+        ? '监管端账号创建成功后，可直接进入审批、核验与预警处理工作台。'
+        : '养殖户账号创建成功后，可直接进入水质监测、台账记录与预警页面。';
     },
   },
   methods: {
@@ -153,26 +149,4 @@ export default Vue.extend({
 </script>
 
 <style scoped lang="less">
-.register-role-tip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: rgba(31, 116, 216, 0.08);
-  color: #1d4f79;
-
-  strong {
-    font-weight: 700;
-  }
-}
-
-.register-tip {
-  margin: 6px 0 16px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: #5e738a;
-}
 </style>

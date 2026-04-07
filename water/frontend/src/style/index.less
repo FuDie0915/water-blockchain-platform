@@ -81,6 +81,34 @@ body {
   pointer-events: none;
 }
 
+body.error-quiet-mode {
+  .t-message--error,
+  .t-notification--error,
+  .t-alert--error,
+  .t-form__error,
+  .t-form__error-message,
+  .t-input__extra {
+    display: none !important;
+  }
+
+  .t-input.t-is-error .t-input__inner,
+  .t-textarea.t-is-error .t-textarea__inner,
+  .t-select.t-is-error .t-input__inner,
+  .t-date-picker.t-is-error .t-input__inner,
+  .t-input-adornment--error {
+    border-color: var(--marine-border-strong) !important;
+    box-shadow: none !important;
+    background-image: none !important;
+  }
+
+  .t-is-error,
+  .t-is-error .t-input__prefix,
+  .t-is-error .t-input__suffix,
+  .t-is-error .t-textarea__limit {
+    color: inherit !important;
+  }
+}
+
 @media (max-width: 992px) {
   .marine-page {
     padding: 16px;

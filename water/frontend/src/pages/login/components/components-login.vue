@@ -7,11 +7,6 @@
     label-width="0"
     @submit="onSubmit"
   >
-    <div class="login-role-tip">
-      <span>当前登录端口</span>
-      <strong>{{ roleText }}</strong>
-    </div>
-
     <t-form-item name="userAccount">
       <t-input v-model="formData.userAccount" size="large" :placeholder="accountPlaceholder">
         <template #prefix-icon>
@@ -38,8 +33,6 @@
       </t-input>
     </t-form-item>
 
-    <div class="login-help-row">{{ helpText }}</div>
-
     <t-form-item class="btn-container">
       <t-button block size="large" theme="primary" type="submit" :loading="submitting">{{ submitText }}</t-button>
     </t-form-item>
@@ -61,7 +54,7 @@ const FORM_RULES = {
 };
 
 const ROLE_TEXT_MAP = {
-  admin: '平台总览',
+  admin: '管理员端',
   company: '养殖户端',
   manager: '监管端',
 };
@@ -83,7 +76,7 @@ export default Vue.extend({
   props: {
     role: {
       type: String,
-      default: 'admin',
+      default: 'company',
     },
   },
   data() {
@@ -99,19 +92,15 @@ export default Vue.extend({
       return ROLE_TEXT_MAP[this.role] || '当前端口';
     },
     accountPlaceholder() {
-      return this.role === 'manager' ? '请输入监管账号' : '请输入登录账号';
+      if (this.role === 'admin') return '请输入管理员账号';
+      if (this.role === 'manager') return '请输入监管账号';
+      return '请输入养殖户账号';
     },
     passwordPlaceholder() {
       return '请输入登录密码';
     },
     submitText() {
-      return `登录${this.roleText}`;
-    },
-    helpText() {
-      if (this.role === 'manager') {
-        return '登录成功后将根据当前账号权限自动进入对应控制台，并限制跨端访问。';
-      }
-      return '登录成功后将根据当前账号权限自动进入对应控制台，并限制跨端访问。';
+      return this.role === 'admin' ? '登录管理员端' : `登录${this.roleText}`;
     },
   },
   mounted() {
@@ -133,13 +122,16 @@ export default Vue.extend({
           roleType: this.role,
         });
         const role = account.toLowerCase() === 'admin' ? 'admin' : (data?.userResp?.userRole || this.role);
-        const fallbackRoute = ROLE_ROUTE_MAP[role] || '/dashboard/base';
+        const normalizedRoles = Array.isArray(role) ? role : [role];
+        const fallbackRoute = data?.defaultRoute || ROLE_ROUTE_MAP[normalizedRoles[0]] || '/dashboard/base';
         const redirect = this.$route.query.redirect && this.$route.query.redirect !== '/login'
           ? this.$route.query.redirect
           : fallbackRoute;
 
-        this.$message.success(`${ROLE_TEXT_MAP[role] || '当前端口'}登录成功`);
-        this.$router.replace(redirect).catch(() => '');
+        await this.$store.dispatch('permission/initRoutes', normalizedRoles);
+        this.$message.success(`${ROLE_TEXT_MAP[normalizedRoles[0]] || '当前端口'}登录成功`);
+        await this.$nextTick();
+        await this.$router.replace(redirect).catch(() => '');
       } finally {
         this.submitting = false;
       }
@@ -147,28 +139,3 @@ export default Vue.extend({
   },
 });
 </script>
-
-<style scoped lang="less">
-.login-role-tip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: rgba(31, 116, 216, 0.08);
-  color: #1d4f79;
-
-  strong {
-    font-weight: 700;
-  }
-}
-
-.login-help-row {
-  margin: 8px 0 18px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: #5e738a;
-}
-</style>

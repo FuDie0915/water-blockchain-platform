@@ -13,7 +13,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/blockchain
     username: root
-    password: 123456 # 请根据实际情况修改
+    password: 123456npm run dev'
     hikari:
       idle-timeout: 23333 # 10 minutes
       max-lifetime: 23333 # 30 minutes
@@ -66,26 +66,21 @@ app:
 #  # 版权年份
 #  copyrightYear: 2024
   # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: D:/Project/water-blockchain-platform/water/frontend/res
-#  # 获取ip地址开关
-#  addressEnabled: false
+  profile: ./userUpload
 
-# 微信相关
-wx:
-  # 微信公众平台
-  mp:
-    token: xxx
-    aesKey: xxx
-    appId: xxx
-    secret: xxx
-    config-storage:
-      http-client-type: HttpClient
-      key-prefix: wx
-      redis:
-        host: 127.0.0.1
-        port: 6379
-      type: Memory
-  # 微信开放平台
-  open:
-    appId: xxx
-    appSecret: xxx
+# 区块链配置
+water:
+  # 是否启用区块链
+  enabled: true
+  # 区块链节点地址
+  peers: 127.0.0.1:20200
+  # 群组ID
+  groupId: 1
+  # 证书路径
+  certPath: conf
+  # 私钥（可选，不配置则自动生成）
+  hexPrivateKey:
+  # 合约地址配置
+  contract:
+    waterAddress:
+    keyValueStoreAddress:

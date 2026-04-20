@@ -4,7 +4,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 
 /**
@@ -18,6 +18,6 @@ import java.util.List;
 public class WaterDataUpChainReq {
 
     @ApiModelProperty(value = "ID", example = "1")
-    @NotBlank(message = "id不能为空")
+    @NotEmpty(message = "id不能为空")
     private List<Long> id;
 }

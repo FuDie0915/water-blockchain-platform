@@ -98,15 +98,107 @@ export function Logout(data) {
   })
 }
 
-// 监管局审批许可
-export function Login(data) {
+// 监管局查询所有许可证
+export function queryAllPermissionByManager() {
   return request({
-    url: '/gk_api/water/user/login',
+    url: '/gk_api/water/permission/manager/allQuery',
+    method: 'get'
+  })
+}
+
+// 删除许可证（仅被拒绝的）
+export function deletePermission(certId) {
+  return request({
+    url: '/gk_api/water/permission/delete/' + certId,
+    method: 'post'
+  })
+}
+
+// 删除水质数据（仅未上链的）
+export function deleteWaterData(dataId) {
+  return request({
+    url: '/gk_api/water/data/delete/' + dataId,
+    method: 'post'
+  })
+}
+
+// 水数据采集
+export function collectWaterData(data) {
+  return request({
+    url: '/gk_api/water/data/collect',
     method: 'post',
-    data: {
-      userAccount: data.userAccount,
-      userPassword: data.userPassword,
-      loginType: data.loginType,
-    }
+    data
+  })
+}
+
+// 养殖户手动上报水质数据
+export function manualReportWaterData(data) {
+  return request({
+    url: '/gk_api/water/data/manual',
+    method: 'post',
+    data
+  })
+}
+
+// 新建预警阈值配置
+export function createThreshold(data) {
+  return request({
+    url: '/gk_api/water/threshold/create',
+    method: 'post',
+    data
+  })
+}
+
+// 修改预警阈值配置
+export function updateThreshold(data) {
+  return request({
+    url: '/gk_api/water/threshold/update',
+    method: 'post',
+    data
+  })
+}
+
+// 获取预警阈值配置
+export function getThreshold() {
+  return request({
+    url: '/gk_api/water/threshold/get',
+    method: 'get'
+  })
+}
+
+// 监管局查看管辖养殖户的水质数据
+export function getManagerWaterDataList(params) {
+  return request({
+    url: '/gk_api/water/data/manager/list',
+    method: 'get',
+    params
+  })
+}
+
+// 监管局审核水质数据
+export function managerAuditWaterData(data) {
+  return request({
+    url: '/gk_api/water/data/manager/audit',
+    method: 'post',
+    data
+  })
+}
+
+// 监管局批量审核水质数据
+export function managerBatchAuditWaterData(data) {
+  return request({
+    url: '/gk_api/water/data/manager/batchAudit',
+    method: 'post',
+    data
+  })
+}
+
+// 监管局导出水质数据Excel
+export function exportWaterDataList(params) {
+  return request({
+    url: '/gk_api/water/data/manager/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
   })
 }

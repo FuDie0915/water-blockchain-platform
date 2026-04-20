@@ -2,10 +2,11 @@ package com.water.platform.model.dto.req;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * @author ：devon
@@ -14,15 +15,15 @@ import javax.validation.constraints.NotNull;
  * @version: 1.0
  */
 @ApiModel(description = "登录输入参数")
+@AllArgsConstructor
+@NoArgsConstructor
 @Data
 public class UserLoginReq {
     @ApiModelProperty(value = "账号", required = true)
     @NotBlank
     private String userAccount;
+
     @ApiModelProperty(value = "密码", required = true)
     @NotBlank
     private String userPassword;
-    @ApiModelProperty(value = "登录类型(0企业、1监管局)", required = true)
-    @NotNull
-    private Integer loginType;
 }

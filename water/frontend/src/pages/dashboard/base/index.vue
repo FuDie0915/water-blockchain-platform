@@ -6,10 +6,8 @@
           <div class="hero-badge">系统管理员端 · 权限治理 · 节点巡检</div>
           <h1>海水养殖系统管理员控制台</h1>
           <p>
-            面向平台管理员统一处理账号开通、阈值配置、节点巡检、日志备份和公告发布，
-            可直接查看整体管理流程与平台运行概况。
+            面向平台管理员统一处理账号开通、阈值配置、节点巡检、日志备份和公告发布。
           </p>
-
         </div>
 
         <div class="ocean-card status-panel">
@@ -72,6 +70,9 @@
       <t-row :gutter="[16, 16]" class="content-row">
         <t-col :xs="12" :lg="8">
           <t-card title="用户权限管理" :bordered="false" class="panel-card table-card">
+            <template #actions>
+              <t-button size="small" theme="primary" @click="openCreateUserDialog">新增用户</t-button>
+            </template>
             <div class="section-tip">面向管理员分别管理养殖户与监管账号，可查看主体、片区、状态和最近活跃情况。</div>
             <div class="account-split-grid">
               <div class="account-split-panel">
@@ -84,6 +85,7 @@
                   size="small"
                   max-height="260"
                   :pagination="false"
+                  :loading="loadingUsers"
                 />
               </div>
               <div class="account-split-panel">
@@ -96,6 +98,7 @@
                   size="small"
                   max-height="260"
                   :pagination="false"
+                  :loading="loadingUsers"
                 />
               </div>
             </div>
@@ -104,7 +107,11 @@
 
         <t-col :xs="12" :lg="4">
           <t-card title="预警阈值配置" :bordered="false" class="panel-card">
-            <div class="threshold-list">
+            <template #actions>
+              <t-button size="small" theme="primary" variant="outline" @click="openThresholdDialog">配置阈值</t-button>
+            </template>
+            <t-loading v-if="loadingThreshold" text="加载中..." />
+            <div v-else class="threshold-list">
               <div v-for="item in thresholdRules" :key="item.metric" class="threshold-item">
                 <div class="threshold-item__top">
                   <span>{{ item.metric }}</span>
@@ -113,8 +120,8 @@
                 <div class="threshold-item__range">正常：{{ item.normal }}</div>
                 <div class="threshold-item__range">预警：{{ item.warning }}</div>
                 <div class="threshold-item__range danger">危险：{{ item.danger }}</div>
-                <div class="threshold-item__meta">最近更新：{{ item.updateTime }} · {{ item.updatedBy }}</div>
               </div>
+              <div v-if="thresholdRules.length === 0" class="empty-tip">暂无阈值配置</div>
             </div>
           </t-card>
         </t-col>
@@ -173,14 +180,14 @@
       <t-row :gutter="[16, 16]" class="content-row">
         <t-col :xs="12" :lg="8">
           <t-card title="公告发布" :bordered="false" class="panel-card">
-            <div class="section-tip">支持向全部养殖户或指定角色推送平台通知，并统一留存发布记录。</div>
+            <div class="section-tip">支持向全部养殖户或指定角色推送平台通知。</div>
             <div class="notice-form-grid">
               <t-input v-model="noticeForm.title" placeholder="请输入公告标题，如：大风天气巡检提醒" />
-              <t-select v-model="noticeForm.audience" :options="noticeAudienceOptions" placeholder="请选择推送对象" />
-              <t-textarea v-model="noticeForm.content" :maxlength="160" placeholder="请输入公告内容，支持面向所有养殖户推送提醒" />
+              <t-select v-model="noticeForm.targetRole" :options="noticeAudienceOptions" placeholder="请选择推送对象" />
+              <t-textarea v-model="noticeForm.content" :maxlength="500" placeholder="请输入公告内容" />
             </div>
             <div class="form-actions">
-              <t-button theme="primary" @click="publishAnnouncement">发布公告</t-button>
+              <t-button theme="primary" :loading="publishing" @click="publishAnnouncement">发布公告</t-button>
               <t-button variant="outline" @click="resetNoticeForm">清空内容</t-button>
             </div>
           </t-card>
@@ -188,31 +195,118 @@
 
         <t-col :xs="12" :lg="4">
           <t-card title="最近公告" :bordered="false" class="panel-card">
-            <div class="announcement-list">
+            <t-loading v-if="loadingAnnouncements" text="加载中..." />
+            <div v-else class="announcement-list">
               <div v-for="item in announcements" :key="item.id" class="announcement-item">
                 <div class="announcement-item__top">
                   <span>{{ item.title }}</span>
-                  <t-tag :theme="item.theme" variant="light-outline">{{ formatNoticeAudience(item.audience) }}</t-tag>
+                  <t-tag theme="primary" variant="light-outline">{{ formatTargetRole(item.targetRole) }}</t-tag>
                 </div>
                 <div class="announcement-item__desc">{{ item.content }}</div>
-                <div class="announcement-item__time">{{ item.publishTime }}</div>
+                <div class="announcement-item__time">{{ item.createTime }}</div>
               </div>
+              <div v-if="announcements.length === 0" class="empty-tip">暂无公告</div>
             </div>
           </t-card>
         </t-col>
       </t-row>
     </t-loading>
+
+    <!-- 新增用户对话框 -->
+    <t-dialog
+      :visible.sync="createUserDialogVisible"
+      header="新增用户"
+      width="500px"
+      :confirm-btn="{ content: '创建', theme: 'primary', loading: creatingUser }"
+      @confirm="handleCreateUser"
+      @cancel="resetCreateUserForm"
+    >
+      <t-form :data="createUserForm" layout="vertical">
+        <t-form-item label="用户账号">
+          <t-input v-model="createUserForm.userAccount" placeholder="请输入用户账号" />
+        </t-form-item>
+        <t-form-item label="用户名称">
+          <t-input v-model="createUserForm.userName" placeholder="请输入用户名称" />
+        </t-form-item>
+        <t-form-item label="用户角色">
+          <t-select v-model="createUserForm.userRole" :options="roleOptions" placeholder="请选择用户角色" />
+        </t-form-item>
+        <t-form-item label="联系电话">
+          <t-input v-model="createUserForm.phone" placeholder="请输入联系电话" />
+        </t-form-item>
+        <t-form-item label="初始密码">
+          <t-input v-model="createUserForm.userPassword" type="password" placeholder="请输入初始密码" />
+        </t-form-item>
+      </t-form>
+    </t-dialog>
+
+    <!-- 阈值配置对话框 -->
+    <t-dialog
+      :visible.sync="thresholdDialogVisible"
+      header="预警阈值配置"
+      width="600px"
+      :confirm-btn="{ content: '保存', theme: 'primary', loading: savingThreshold }"
+      @confirm="handleSaveThreshold"
+      @cancel="thresholdDialogVisible = false"
+    >
+      <t-form :data="thresholdForm" layout="vertical">
+        <t-row :gutter="[12, 12]">
+          <t-col :span="6">
+            <t-form-item label="溶解氧正常值(mg/L)">
+              <t-input v-model="thresholdForm.doNormal" placeholder="≥ 5" />
+            </t-form-item>
+          </t-col>
+          <t-col :span="6">
+            <t-form-item label="溶解氧预警值">
+              <t-input v-model="thresholdForm.doWarning" placeholder="3 ~ 5" />
+            </t-form-item>
+          </t-col>
+          <t-col :span="6">
+            <t-form-item label="pH正常范围">
+              <t-input v-model="thresholdForm.phNormal" placeholder="7.8 ~ 8.6" />
+            </t-form-item>
+          </t-col>
+          <t-col :span="6">
+            <t-form-item label="pH预警范围">
+              <t-input v-model="thresholdForm.phWarning" placeholder="7.5 ~ 7.8 / 8.6 ~ 9.0" />
+            </t-form-item>
+          </t-col>
+          <t-col :span="6">
+            <t-form-item label="氨氮正常值(mg/L)">
+              <t-input v-model="thresholdForm.nh3Normal" placeholder="≤ 0.2" />
+            </t-form-item>
+          </t-col>
+          <t-col :span="6">
+            <t-form-item label="氨氮预警值">
+              <t-input v-model="thresholdForm.nh3Warning" placeholder="0.2 ~ 0.5" />
+            </t-form-item>
+          </t-col>
+        </t-row>
+      </t-form>
+    </t-dialog>
   </div>
 </template>
 
 <script>
 import { getBlockchainBoard } from '@/api/common/common';
+import { getAdminUserList, adminCreateUser, updateUserStatus } from '@/api/water/user';
+import { getAdminAnnouncementList, adminPublishAnnouncement } from '@/api/water/announcement';
+import { getAdminDashboard } from '@/api/water/dashboard';
+import { getThreshold, createThreshold } from '@/api/water/water';
 
 export default {
   name: 'DashboardBase',
   data() {
     return {
       loading: false,
+      loadingUsers: false,
+      loadingAnnouncements: false,
+      loadingThreshold: false,
+      publishing: false,
+      creatingUser: false,
+      savingThreshold: false,
+      createUserDialogVisible: false,
+      thresholdDialogVisible: false,
       boardData: {
         blockCount: 0,
         nodeCount: 0,
@@ -220,107 +314,86 @@ export default {
         tranCount2: 0,
         nodeStatusList: [],
       },
+      dashboardData: {},
+      userList: [],
+      announcements: [],
+      thresholdData: null,
       columns: [
-        {
-          colKey: 'nodeId',
-          title: '节点 ID',
-          ellipsis: true,
-        },
-        {
-          colKey: 'blockNumber',
-          title: '块高',
-          width: 120,
-        },
-        {
-          colKey: 'pbftView',
-          title: 'PBFT 视图',
-          width: 120,
-        },
-        {
-          colKey: 'status',
-          title: '状态',
-          width: 100,
-          cell: 'status',
-        },
-        {
-          colKey: 'latestStatusUpdateTime',
-          title: '最后更新时间',
-          width: 180,
-          cell: 'latestStatusUpdateTime',
-        },
-      ],
-      systemAccounts: [
-        { id: 1, accountName: 'company_east_01', displayName: '蓝海一号养殖场', role: '养殖户', region: '东港示范区', status: '启用', lastActive: '今日 10:18', permissions: '水质上报 / 存证查询' },
-        { id: 2, accountName: 'company_west_03', displayName: '澄海生态养殖合作社', role: '养殖户', region: '西湾养殖区', status: '启用', lastActive: '今日 09:50', permissions: '许可证申请 / 水质上报' },
-        { id: 3, accountName: 'manager_city_01', displayName: '海洋监管一处', role: '监管账号', region: '市级监管', status: '启用', lastActive: '今日 10:02', permissions: '审批复核 / 数据上链' },
-        { id: 4, accountName: 'manager_district_02', displayName: '西湾片区监管组', role: '监管账号', region: '西湾养殖区', status: '停用', lastActive: '昨日 16:24', permissions: '异常复核 / 预警处置' },
+        { colKey: 'nodeId', title: '节点 ID', ellipsis: true },
+        { colKey: 'blockNumber', title: '块高', width: 120 },
+        { colKey: 'pbftView', title: 'PBFT 视图', width: 120 },
+        { colKey: 'status', title: '状态', width: 100, cell: 'status' },
+        { colKey: 'latestStatusUpdateTime', title: '最后更新时间', width: 180, cell: 'latestStatusUpdateTime' },
       ],
       accountColumns: [
-        { colKey: 'accountName', title: '账号名', minWidth: 150 },
-        { colKey: 'displayName', title: '主体名称', minWidth: 170 },
+        { colKey: 'userAccount', title: '账号名', minWidth: 130 },
+        { colKey: 'userName', title: '用户名称', minWidth: 120 },
         {
-          colKey: 'role',
+          colKey: 'userRole',
           title: '角色类型',
-          width: 120,
-          cell: (h, { row }) => h('t-tag', { props: { theme: row.role === '监管账号' ? 'primary' : 'success', variant: 'light' } }, row.role),
+          width: 100,
+          cell: (h, { row }) => h('t-tag', {
+            props: { theme: row.userRole === 'MANAGER' ? 'primary' : 'success', variant: 'light' }
+          }, this.formatRole(row.userRole)),
         },
-        { colKey: 'region', title: '所属片区', width: 130 },
         {
-          colKey: 'status',
+          colKey: 'userStatus',
           title: '账号状态',
-          width: 110,
-          cell: (h, { row }) => h('t-tag', { props: { theme: row.status === '启用' ? 'success' : 'warning', variant: 'light-outline' } }, row.status),
+          width: 100,
+          cell: (h, { row }) => h('t-tag', {
+            props: { theme: row.userStatus === 1 ? 'success' : 'warning', variant: 'light-outline' }
+          }, row.userStatus === 1 ? '启用' : '停用'),
         },
-        { colKey: 'permissions', title: '主要权限', minWidth: 180 },
-        { colKey: 'lastActive', title: '最近活跃', width: 120 },
         {
           colKey: 'operation',
           title: '操作',
-          width: 160,
-          cell: (h, { row }) => h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, [
-            h('t-button', {
-              props: {
-                size: 'small',
-                variant: 'text',
-                theme: row.status === '启用' ? 'warning' : 'success',
-              },
-              on: { click: () => this.toggleAccountStatus(row) },
-            }, row.status === '启用' ? '停用' : '启用'),
-            h('t-button', {
-              props: { size: 'small', variant: 'text', theme: 'primary' },
-              on: { click: () => this.showPermissionTip(row) },
-            }, '详情'),
-          ]),
+          width: 120,
+          cell: (h, { row }) => h('t-button', {
+            props: {
+              size: 'small',
+              variant: 'text',
+              theme: row.userStatus === 1 ? 'warning' : 'success',
+            },
+            on: { click: () => this.toggleAccountStatus(row) },
+          }, row.userStatus === 1 ? '停用' : '启用'),
         },
       ],
-      thresholdRules: [
-        { metric: '溶解氧 DO', unit: 'mg/L', normal: '≥ 5', warning: '3 ~ 5', danger: '< 3', updatedBy: '管理员A', updateTime: '今日 08:30' },
-        { metric: 'pH', unit: '', normal: '7.8 ~ 8.6', warning: '7.5 ~ 7.8 / 8.6 ~ 9.0', danger: '< 7.5 / > 9.0', updatedBy: '管理员A', updateTime: '今日 08:30' },
-        { metric: '氨氮', unit: 'mg/L', normal: '≤ 0.2', warning: '0.2 ~ 0.5', danger: '> 0.5', updatedBy: '管理员B', updateTime: '昨日 17:20' },
-      ],
-      backupJobs: [
-        { id: 1, title: 'MySQL 全量备份', time: '今日 03:00', size: '128 MB', status: '成功', theme: 'success' },
-        { id: 2, title: '链上回执归档', time: '今日 03:20', size: '42 MB', status: '成功', theme: 'success' },
-        { id: 3, title: '预警日志增量备份', time: '昨日 23:40', size: '18 MB', status: '待核验', theme: 'warning' },
-      ],
-      systemLogs: [
-        { id: 1, level: 'INFO', theme: 'success', module: '账号管理', message: '已为“蓝海一号养殖场”开通养殖户账号与默认权限。', time: '今日 10:06' },
-        { id: 2, level: 'WARN', theme: 'warning', module: '阈值配置', message: '管理员调整了西湾片区氨氮预警阈值，待监管端同步确认。', time: '今日 09:40' },
-        { id: 3, level: 'INFO', theme: 'primary', module: '公告发布', message: '“大风天气巡检提醒” 已推送给全部养殖户。', time: '昨日 18:15' },
-      ],
       noticeAudienceOptions: [
-        { label: '全部养殖户', value: 'all-farmers' },
-        { label: '全部监管账号', value: 'all-managers' },
-        { label: '全平台', value: 'all' },
+        { label: '全部养殖户', value: 'FARMERS' },
+        { label: '全部监管端', value: 'MANAGER' },
+        { label: '全平台', value: 'ALL' },
+      ],
+      roleOptions: [
+        { label: '养殖户', value: 'FARMERS' },
+        { label: '监管端', value: 'MANAGER' },
+        { label: '管理员', value: 'ADMIN' },
       ],
       noticeForm: {
         title: '',
-        audience: 'all-farmers',
+        targetRole: 'FARMERS',
         content: '',
       },
-      announcements: [
-        { id: 1, title: '大风天气巡检提醒', audience: 'all-farmers', content: '请各养殖户于今日 18:00 前完成增氧设备、电源与围栏巡检。', publishTime: '今日 09:00', theme: 'primary' },
-        { id: 2, title: '监管端周报提交通知', audience: 'all-managers', content: '请各片区监管员在周五 17:30 前提交本周异常处置汇总。', publishTime: '昨日 16:30', theme: 'warning' },
+      createUserForm: {
+        userAccount: '',
+        userName: '',
+        userRole: 'FARMERS',
+        phone: '',
+        userPassword: '123456',
+      },
+      thresholdForm: {
+        doNormal: '≥ 5',
+        doWarning: '3 ~ 5',
+        phNormal: '7.8 ~ 8.6',
+        phWarning: '7.5 ~ 7.8 / 8.6 ~ 9.0',
+        nh3Normal: '≤ 0.2',
+        nh3Warning: '0.2 ~ 0.5',
+      },
+      backupJobs: [
+        { id: 1, title: 'MySQL 全量备份', time: '今日 03:00', size: '128 MB', status: '成功', theme: 'success' },
+        { id: 2, title: '链上回执归档', time: '今日 03:20', size: '42 MB', status: '成功', theme: 'success' },
+      ],
+      systemLogs: [
+        { id: 1, level: 'INFO', theme: 'success', module: '账号管理', message: '系统运行正常', time: '今日 10:06' },
       ],
       tablePagination: {
         current: 1,
@@ -331,48 +404,26 @@ export default {
   },
   computed: {
     farmerAccounts() {
-      return this.systemAccounts.filter((item) => item.role === '养殖户');
+      return this.userList.filter((item) => item.userRole === 'FARMERS');
     },
     managerAccounts() {
-      return this.systemAccounts.filter((item) => item.role === '监管账号');
+      return this.userList.filter((item) => item.userRole === 'MANAGER');
     },
     stats() {
-      const farmerCount = this.farmerAccounts.length;
-      const managerCount = this.managerAccounts.length;
-      const enabledCount = this.systemAccounts.filter((item) => item.status === '启用').length;
       return [
-        {
-          title: '养殖户账号',
-          value: farmerCount,
-          description: '当前已开通并纳入平台管理的养殖主体',
-        },
-        {
-          title: '监管账号',
-          value: managerCount,
-          description: '可执行审批、复核与抽检的监管账户',
-        },
-        {
-          title: '启用账号数',
-          value: enabledCount,
-          description: '目前处于正常使用状态的系统账户',
-        },
-        {
-          title: '公告已发布',
-          value: this.announcements.length,
-          description: '最近面向养殖户或监管端的通知条数',
-        },
+        { title: '养殖户账号', value: this.farmerAccounts.length, description: '当前已开通并纳入平台管理的养殖主体' },
+        { title: '监管账号', value: this.managerAccounts.length, description: '可执行审批、复核与抽检的监管账户' },
+        { title: '启用账号数', value: this.userList.filter((item) => item.userStatus === 1).length, description: '目前处于正常使用状态的系统账户' },
+        { title: '公告已发布', value: this.announcements.length, description: '最近面向养殖户或监管端的通知条数' },
       ];
     },
     businessOverviewCards() {
-      const warningCount = 3;
-      const permitPending = 1;
-      const chainRate = '98%';
-      const totalPonds = 12;
+      const data = this.dashboardData || {};
       return [
-        { title: '养殖池总数', value: `${totalPonds}个`, description: '当前纳入平台监管的养殖池规模' },
-        { title: '活跃预警', value: `${warningCount}条`, description: '待管理员关注或派发的异常事件' },
-        { title: '待审批许可', value: `${permitPending}项`, description: '监管端待处理的许可申请数量' },
-        { title: '上链完整率', value: chainRate, description: '最近业务台账链上固化完成度' },
+        { title: '养殖池总数', value: `${data.pondCount || 0}个`, description: '当前纳入平台监管的养殖池规模' },
+        { title: '活跃预警', value: `${data.warningCount || 0}条`, description: '待管理员关注或派发的异常事件' },
+        { title: '待审批许可', value: `${data.pendingPermitCount || 0}项`, description: '监管端待处理的许可申请数量' },
+        { title: '上链完整率', value: `${data.chainRate || '98'}%`, description: '最近业务台账链上固化完成度' },
       ];
     },
     dataOverviewRows() {
@@ -390,6 +441,20 @@ export default {
         { title: '全域数据留痕', description: '持续跟踪全过程记录的上链完整率与一致性。', status: '需复核', theme: 'warning' },
       ];
     },
+    thresholdRules() {
+      if (!this.thresholdData) {
+        return [
+          { metric: '溶解氧 DO', unit: 'mg/L', normal: '≥ 5', warning: '3 ~ 5', danger: '< 3' },
+          { metric: 'pH', unit: '', normal: '7.8 ~ 8.6', warning: '7.5 ~ 7.8 / 8.6 ~ 9.0', danger: '< 7.5 / > 9.0' },
+          { metric: '氨氮', unit: 'mg/L', normal: '≤ 0.2', warning: '0.2 ~ 0.5', danger: '> 0.5' },
+        ];
+      }
+      return [
+        { metric: '溶解氧 DO', unit: 'mg/L', normal: this.thresholdData.doNormal || '≥ 5', warning: this.thresholdData.doWarning || '3 ~ 5', danger: '< 3' },
+        { metric: 'pH', unit: '', normal: this.thresholdData.phNormal || '7.8 ~ 8.6', warning: this.thresholdData.phWarning || '7.5 ~ 7.8 / 8.6 ~ 9.0', danger: '< 7.5 / > 9.0' },
+        { metric: '氨氮', unit: 'mg/L', normal: this.thresholdData.nh3Normal || '≤ 0.2', warning: this.thresholdData.nh3Warning || '0.2 ~ 0.5', danger: '> 0.5' },
+      ];
+    },
     healthyNodeCount() {
       return (this.boardData.nodeStatusList || []).filter((item) => item.status === 1).length;
     },
@@ -398,14 +463,24 @@ export default {
     },
   },
   created() {
-    this.fetchBoard();
+    this.fetchAllData();
   },
   methods: {
-    async fetchBoard() {
+    async fetchAllData() {
       this.loading = true;
+      await Promise.all([
+        this.fetchBoard(),
+        this.fetchUsers(),
+        this.fetchAnnouncements(),
+        this.fetchDashboard(),
+        this.fetchThreshold(),
+      ]);
+      this.loading = false;
+    },
+    async fetchBoard() {
       try {
         const response = await getBlockchainBoard();
-        if (response?.code === 0 && response.data) {
+        if (response?.code === 200 && response.data) {
           this.boardData = {
             ...this.boardData,
             ...response.data,
@@ -418,14 +493,13 @@ export default {
           this.applyMockBoard();
         }
       } catch (error) {
-        console.error('加载区块链看板失败，已切换为备用数据:', error);
+        console.error('加载区块链看板失败:', error);
         this.applyMockBoard();
       } finally {
         this.tablePagination = {
           ...this.tablePagination,
           total: this.boardData.nodeCount || this.boardData.nodeStatusList.length || 0,
         };
-        this.loading = false;
       }
     },
     applyMockBoard() {
@@ -436,54 +510,181 @@ export default {
         tranCount2: 9,
         nodeStatusList: [
           { nodeId: 'node0', blockNumber: 28416, pbftView: 7821, status: 1, latestStatusUpdateTime: Date.now() },
-          { nodeId: 'node1', blockNumber: 28416, pbftView: 7821, status: 1, latestStatusUpdateTime: Date.now() - 30 * 1000 },
-          { nodeId: 'node2', blockNumber: 28415, pbftView: 7820, status: 1, latestStatusUpdateTime: Date.now() - 45 * 1000 },
-          { nodeId: 'node3', blockNumber: 28412, pbftView: 7818, status: 0, latestStatusUpdateTime: Date.now() - 3 * 60 * 1000 },
+          { nodeId: 'node1', blockNumber: 28416, pbftView: 7821, status: 1, latestStatusUpdateTime: Date.now() - 30000 },
+          { nodeId: 'node2', blockNumber: 28415, pbftView: 7820, status: 1, latestStatusUpdateTime: Date.now() - 45000 },
+          { nodeId: 'node3', blockNumber: 28412, pbftView: 7818, status: 0, latestStatusUpdateTime: Date.now() - 180000 },
         ],
       };
     },
-    goTo(path) {
-      this.$router.push(path);
+    async fetchUsers() {
+      this.loadingUsers = true;
+      try {
+        const res = await getAdminUserList();
+        if (res.code === 200 && res.data) {
+          this.userList = Array.isArray(res.data) ? res.data : res.data.records || [];
+        }
+      } catch (error) {
+        console.error('加载用户列表失败:', error);
+      } finally {
+        this.loadingUsers = false;
+      }
+    },
+    async fetchAnnouncements() {
+      this.loadingAnnouncements = true;
+      try {
+        const res = await getAdminAnnouncementList();
+        if (res.code === 200 && res.data) {
+          this.announcements = Array.isArray(res.data) ? res.data : res.data.records || [];
+        }
+      } catch (error) {
+        console.error('加载公告列表失败:', error);
+      } finally {
+        this.loadingAnnouncements = false;
+      }
+    },
+    async fetchDashboard() {
+      try {
+        const res = await getAdminDashboard();
+        if (res.code === 200 && res.data) {
+          this.dashboardData = res.data;
+        }
+      } catch (error) {
+        console.error('加载看板数据失败:', error);
+      }
+    },
+    async fetchThreshold() {
+      this.loadingThreshold = true;
+      try {
+        const res = await getThreshold();
+        if (res.code === 200 && res.data) {
+          this.thresholdData = res.data;
+        }
+      } catch (error) {
+        console.error('加载阈值配置失败:', error);
+      } finally {
+        this.loadingThreshold = false;
+      }
     },
     formatTime(value) {
       if (!value) return '--';
       return new Date(value).toLocaleString();
     },
-    toggleAccountStatus(row) {
-      row.status = row.status === '启用' ? '停用' : '启用';
-      this.$message.success(`${row.displayName} 账号状态已切换为${row.status}`);
+    formatRole(role) {
+      const map = { FARMERS: '养殖户', MANAGER: '监管端', ADMIN: '管理员' };
+      return map[role] || role;
     },
-    showPermissionTip(row) {
-      this.$message.info(`${row.displayName}：当前权限为 ${row.permissions}`);
+    formatTargetRole(role) {
+      const map = { FARMERS: '全部养殖户', MANAGER: '全部监管端', ALL: '全平台' };
+      return map[role] || role;
     },
-    formatNoticeAudience(value) {
-      const map = {
-        'all-farmers': '全部养殖户',
-        'all-managers': '全部监管端',
-        all: '全平台',
+    async toggleAccountStatus(row) {
+      try {
+        const newStatus = row.userStatus === 1 ? 0 : 1;
+        const res = await updateUserStatus({ id: row.id, status: newStatus });
+        if (res.code === 200) {
+          row.userStatus = newStatus;
+          this.$message.success(`${row.userName} 账号状态已切换为${newStatus === 1 ? '启用' : '停用'}`);
+        } else {
+          this.$message.error(res.message || '操作失败');
+        }
+      } catch (error) {
+        console.error('切换用户状态失败:', error);
+        this.$message.error('操作失败');
+      }
+    },
+    openCreateUserDialog() {
+      this.createUserDialogVisible = true;
+    },
+    resetCreateUserForm() {
+      this.createUserForm = {
+        userAccount: '',
+        userName: '',
+        userRole: 'FARMERS',
+        phone: '',
+        userPassword: '123456',
       };
-      return map[value] || '自定义';
     },
-    publishAnnouncement() {
+    async handleCreateUser() {
+      const { userAccount, userName, userRole, userPassword } = this.createUserForm;
+      if (!userAccount || !userName || !userRole || !userPassword) {
+        this.$message.warning('请填写完整信息');
+        return;
+      }
+      this.creatingUser = true;
+      try {
+        const res = await adminCreateUser(this.createUserForm);
+        if (res.code === 200) {
+          this.$message.success('用户创建成功');
+          this.createUserDialogVisible = false;
+          this.resetCreateUserForm();
+          this.fetchUsers();
+        } else {
+          this.$message.error(res.message || '创建失败');
+        }
+      } catch (error) {
+        console.error('创建用户失败:', error);
+        this.$message.error('创建用户失败');
+      } finally {
+        this.creatingUser = false;
+      }
+    },
+    openThresholdDialog() {
+      if (this.thresholdData) {
+        this.thresholdForm = {
+          doNormal: this.thresholdData.doNormal || '≥ 5',
+          doWarning: this.thresholdData.doWarning || '3 ~ 5',
+          phNormal: this.thresholdData.phNormal || '7.8 ~ 8.6',
+          phWarning: this.thresholdData.phWarning || '7.5 ~ 7.8 / 8.6 ~ 9.0',
+          nh3Normal: this.thresholdData.nh3Normal || '≤ 0.2',
+          nh3Warning: this.thresholdData.nh3Warning || '0.2 ~ 0.5',
+        };
+      }
+      this.thresholdDialogVisible = true;
+    },
+    async handleSaveThreshold() {
+      this.savingThreshold = true;
+      try {
+        const res = await createThreshold(this.thresholdForm);
+        if (res.code === 200) {
+          this.$message.success('阈值配置保存成功');
+          this.thresholdDialogVisible = false;
+          this.fetchThreshold();
+        } else {
+          this.$message.error(res.message || '保存失败');
+        }
+      } catch (error) {
+        console.error('保存阈值配置失败:', error);
+        this.$message.error('保存失败');
+      } finally {
+        this.savingThreshold = false;
+      }
+    },
+    async publishAnnouncement() {
       if (!this.noticeForm.title || !this.noticeForm.content) {
         this.$message.warning('请先填写公告标题和内容');
         return;
       }
-      this.announcements.unshift({
-        id: Date.now(),
-        title: this.noticeForm.title,
-        audience: this.noticeForm.audience,
-        content: this.noticeForm.content,
-        publishTime: '刚刚',
-        theme: 'success',
-      });
-      this.$message.success('公告已发布并推送到目标用户');
-      this.resetNoticeForm();
+      this.publishing = true;
+      try {
+        const res = await adminPublishAnnouncement(this.noticeForm);
+        if (res.code === 200) {
+          this.$message.success('公告发布成功');
+          this.resetNoticeForm();
+          this.fetchAnnouncements();
+        } else {
+          this.$message.error(res.message || '发布失败');
+        }
+      } catch (error) {
+        console.error('发布公告失败:', error);
+        this.$message.error('发布公告失败');
+      } finally {
+        this.publishing = false;
+      }
     },
     resetNoticeForm() {
       this.noticeForm = {
         title: '',
-        audience: 'all-farmers',
+        targetRole: 'FARMERS',
         content: '',
       };
     },
@@ -530,8 +731,6 @@ export default {
   font-weight: 600;
 }
 
-
-
 .status-panel {
   padding: 24px;
   display: flex;
@@ -540,57 +739,24 @@ export default {
   background: linear-gradient(135deg, #1f74d8 0%, #0da8c5 100%);
   color: #fff;
 
-  &__label {
-    font-size: 14px;
-    opacity: 0.85;
-  }
-
-  &__value {
-    margin: 12px 0;
-    font-size: 42px;
-    font-weight: 700;
-  }
-
-  &__text {
-    line-height: 1.8;
-    opacity: 0.92;
-  }
+  &__label { font-size: 14px; opacity: 0.85; }
+  &__value { margin: 12px 0; font-size: 42px; font-weight: 700; }
+  &__text { line-height: 1.8; opacity: 0.92; }
 }
 
 .stats-row,
-.content-row {
-  margin-bottom: 16px;
-}
+.content-row { margin-bottom: 16px; }
 
-.content-row {
-  align-items: stretch;
-}
-
-.content-row > .t-col {
-  display: flex;
-}
+.content-row { align-items: stretch; }
+.content-row > .t-col { display: flex; }
 
 .stat-card {
   min-height: 160px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(238, 247, 255, 0.96) 100%);
 
-  &__label {
-    font-size: 14px;
-    color: #5e738a;
-  }
-
-  &__value {
-    margin: 12px 0 10px;
-    font-size: 32px;
-    font-weight: 700;
-    color: #12314d;
-  }
-
-  &__desc {
-    font-size: 13px;
-    line-height: 1.7;
-    color: #6a7f95;
-  }
+  &__label { font-size: 14px; color: #5e738a; }
+  &__value { margin: 12px 0 10px; font-size: 32px; font-weight: 700; color: #12314d; }
+  &__desc { font-size: 13px; line-height: 1.7; color: #6a7f95; }
 }
 
 .panel-card {
@@ -599,16 +765,8 @@ export default {
   display: flex;
   flex-direction: column;
 
-  :deep(.t-card__body) {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
-  :deep(.t-card__title) {
-    font-size: 18px;
-    font-weight: 600;
-  }
+  :deep(.t-card__body) { height: 100%; display: flex; flex-direction: column; }
+  :deep(.t-card__title) { font-size: 18px; font-weight: 600; }
 }
 
 .section-tip {
@@ -630,23 +788,9 @@ export default {
   background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
   border: 1px solid var(--marine-divider);
 
-  &__label {
-    font-size: 13px;
-    color: #6a7f95;
-  }
-
-  &__value {
-    margin: 8px 0 6px;
-    font-size: 28px;
-    font-weight: 700;
-    color: #12314d;
-  }
-
-  &__desc {
-    font-size: 12px;
-    line-height: 1.7;
-    color: #6a7f95;
-  }
+  &__label { font-size: 13px; color: #6a7f95; }
+  &__value { margin: 8px 0 6px; font-size: 28px; font-weight: 700; color: #12314d; }
+  &__desc { font-size: 12px; line-height: 1.7; color: #6a7f95; }
 }
 
 .overview-table {
@@ -662,25 +806,9 @@ export default {
     border-radius: 14px;
     background: #f8fbff;
   }
-
-  &__title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #12314d;
-  }
-
-  &__desc {
-    margin-top: 4px;
-    font-size: 12px;
-    color: #6a7f95;
-  }
-
-  &__value {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1f74d8;
-    white-space: nowrap;
-  }
+  &__title { font-size: 14px; font-weight: 600; color: #12314d; }
+  &__desc { margin-top: 4px; font-size: 12px; color: #6a7f95; }
+  &__value { font-size: 18px; font-weight: 700; color: #1f74d8; white-space: nowrap; }
 }
 
 .summary-list {
@@ -697,19 +825,8 @@ export default {
     background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
     border: 1px solid var(--marine-divider);
   }
-
-  &__title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #12314d;
-  }
-
-  &__desc {
-    margin-top: 6px;
-    font-size: 12px;
-    line-height: 1.7;
-    color: #6a7f95;
-  }
+  &__title { font-size: 14px; font-weight: 600; color: #12314d; }
+  &__desc { margin-top: 6px; font-size: 12px; line-height: 1.7; color: #6a7f95; }
 }
 
 .account-split-grid {
@@ -724,12 +841,7 @@ export default {
   background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
   border: 1px solid var(--marine-divider);
 
-  &__title {
-    margin-bottom: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #12314d;
-  }
+  &__title { margin-bottom: 10px; font-size: 15px; font-weight: 600; color: #12314d; }
 }
 
 .threshold-list,
@@ -751,31 +863,8 @@ export default {
 }
 
 .threshold-item {
-  &__top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 8px;
-    color: #12314d;
-    font-weight: 600;
-  }
-
-  &__range {
-    margin-top: 6px;
-    font-size: 13px;
-    color: #5e738a;
-
-    &.danger {
-      color: #c64751;
-    }
-  }
-
-  &__meta {
-    margin-top: 8px;
-    font-size: 12px;
-    color: #6a7f95;
-  }
+  &__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; color: #12314d; font-weight: 600; }
+  &__range { margin-top: 6px; font-size: 13px; color: #5e738a; &.danger { color: #c64751; } }
 }
 
 .backup-item__top,
@@ -816,35 +905,22 @@ export default {
   flex-wrap: wrap;
 }
 
-.table-card {
-  :deep(.t-card__body) {
-    padding-top: 8px;
-  }
+.empty-tip {
+  text-align: center;
+  padding: 20px;
+  color: #6a7f95;
+  font-size: 13px;
 }
+
+.table-card :deep(.t-card__body) { padding-top: 8px; }
 
 @media (max-width: 992px) {
   .hero-panel {
     padding: 20px;
-
-    h1 {
-      font-size: 28px;
-    }
+    h1 { font-size: 28px; }
   }
-
-  .status-panel {
-    &__value {
-      font-size: 34px;
-    }
-  }
-
-  .overview-grid,
-  .account-split-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .overview-table__row {
-    align-items: flex-start;
-    flex-direction: column;
-  }
+  .status-panel &__value { font-size: 34px; }
+  .overview-grid, .account-split-grid { grid-template-columns: 1fr; }
+  .overview-table__row { align-items: flex-start; flex-direction: column; }
 }
 </style>

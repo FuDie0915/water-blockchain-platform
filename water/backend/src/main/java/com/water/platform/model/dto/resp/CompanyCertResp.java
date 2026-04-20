@@ -33,4 +33,7 @@ public class CompanyCertResp {
 
     @ApiModelProperty(value = "创建时间")
     private Date createTime;
+
+    @ApiModelProperty(value = "是否在链上")
+    private Boolean isOnChain;
 }

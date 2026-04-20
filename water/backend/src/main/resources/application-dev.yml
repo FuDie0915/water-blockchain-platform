@@ -2,7 +2,7 @@ langchain4j:
   open-ai:
     chat-model:
       base-url: https://open.bigmodel.cn/api/paas/v4
-      api-key: 9d7e23bb66a34df2bfbcac30b1d3de83.ypA6PN5TpdeFHkV2
+      api-key: bb3ffc1e3b434f81a1346cc361442eb0.ZuqmDz2VKKnf5rpW
       model-name: glm-4-flash
       strict-json-schema: true
       response-format: json_object
@@ -11,7 +11,7 @@ langchain4j:
       max-tokens: 8192
     streaming-chat-model:
       base-url: https://open.bigmodel.cn/api/paas/v4
-      api-key: 9d7e23bb66a34df2bfbcac30b1d3de83.ypA6PN5TpdeFHkV2
+      api-key: bb3ffc1e3b434f81a1346cc361442eb0.ZuqmDz2VKKnf5rpW
       model-name: glm-4-flash
       max-tokens: 8192
       log-requests: true

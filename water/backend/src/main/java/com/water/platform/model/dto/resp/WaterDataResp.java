@@ -40,6 +40,9 @@ public class WaterDataResp {
     @ApiModelProperty(value = "是否上链")
     private boolean isOnChain;
 
+    @ApiModelProperty(value = "审核状态(0=待审核,1=已通过,2=已拒绝)")
+    private Integer auditStatus;
+
     public void setIsOnChain(boolean isOnChain) {
         this.isOnChain = isOnChain;
     }

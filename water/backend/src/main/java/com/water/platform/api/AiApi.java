@@ -1,7 +1,12 @@
 package com.water.platform.api;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.water.platform.ai.AiAnswerService;
+import com.water.platform.base.common.ErrorCode;
+import com.water.platform.base.exception.ThrowUtils;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,7 +21,11 @@ public class AiApi {
     private AiAnswerService aiAnswerService;
 
     @GetMapping("/chat")
-    public Flux<ServerSentEvent<String>> chat(String message) {
+    public Flux<ServerSentEvent<String>> chat(String message, HttpServletRequest request) {
+        String token = request.getHeader("satoken");
+        ThrowUtils.throwIf(StringUtils.isBlank(token), ErrorCode.HEADER_PARAMS_ERROR);
+        Object loginId = StpUtil.getLoginIdByToken(token);
+        ThrowUtils.throwIf(loginId == null, ErrorCode.NOT_LOGIN_ERROR);
         return aiAnswerService.chat(message)
                 .map(chunk -> ServerSentEvent.<String>builder()
                         .data(chunk)

@@ -38,4 +38,6 @@ public class CompanyCert {
 
     @ApiModelProperty(value = "创建时间")
     private Date createTime;
+
+    private String chainTxHash;
 }

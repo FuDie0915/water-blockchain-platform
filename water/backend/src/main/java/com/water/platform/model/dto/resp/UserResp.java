@@ -23,9 +23,15 @@ public class UserResp {
     @ApiModelProperty(value = "名称(用户名称、企业名称、监管局名称)")
     private String userName;
 
-    @ApiModelProperty(value = "角色类型", example = "admin、company、manager")
+    @ApiModelProperty(value = "角色类型", example = "admin、farmers、manager")
     private String userRole;
 
     @ApiModelProperty(value = "区块链账户地址", example = "0x0")
     private String accountAddress;
+
+    @ApiModelProperty(value = "用户状态：0=禁用，1=启用")
+    private Integer userStatus;
+
+    @ApiModelProperty(value = "扩展信息(JSON)")
+    private String extInfo;
 }

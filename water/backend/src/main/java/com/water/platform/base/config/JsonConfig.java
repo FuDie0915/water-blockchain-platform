@@ -7,6 +7,8 @@ import org.springframework.boot.jackson.JsonComponent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
+import java.text.SimpleDateFormat;
+
 /**
  * Spring MVC Json 配置
  *
@@ -20,6 +22,8 @@ public class JsonConfig {
     @Bean
     public ObjectMapper jacksonObjectMapper(Jackson2ObjectMapperBuilder builder) {
         ObjectMapper objectMapper = builder.createXmlMapper(false).build();
+        // 设置日期格式，支持 "yyyy-MM-dd HH:mm:ss" 格式的序列化和反序列化
+        objectMapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
         SimpleModule module = new SimpleModule();
         module.addSerializer(Long.class, ToStringSerializer.instance);
         module.addSerializer(Long.TYPE, ToStringSerializer.instance);

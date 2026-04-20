@@ -63,4 +63,14 @@ public class UserContractApi {
                 .eq(UserContract::getContractType, req.getContractType()));
         return ResultUtils.success(userContract);
     }
+
+    @PostMapping("/delete")
+    @ApiOperation("解绑合约")
+    public BaseResponse<Boolean> delete(@RequestParam String contractType) {
+        long userId = StpUtil.getLoginIdAsLong();
+        int row = userContractMapper.delete(new LambdaQueryWrapper<UserContract>()
+                .eq(UserContract::getUserId, userId)
+                .eq(UserContract::getContractType, contractType));
+        return row > 0 ? ResultUtils.success(Boolean.TRUE) : ResultUtils.success(Boolean.FALSE);
+    }
 }

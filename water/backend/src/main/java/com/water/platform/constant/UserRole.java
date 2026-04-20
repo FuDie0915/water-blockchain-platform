@@ -8,6 +8,7 @@ package com.water.platform.constant;
  */
 public final class UserRole {
     public final static String ADMIN = "admin";
-    public final static String COMPANY = "company";
+    /** 养殖户 (was "company") */
+    public final static String FARMERS = "farmers";
     public final static String MANAGER = "manager";
 }

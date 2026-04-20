@@ -26,6 +26,12 @@ public class SdkBeanConfig {
 
     @Bean
     public Client client() throws Exception {
+        // 如果禁用区块链，返回 null
+        if (!config.isEnabled()) {
+            log.info("Blockchain is disabled. Skipping connection to FISCO BCOS.");
+            return null;
+        }
+
         String certPaths = this.config.getCertPath();
         String[] possibilities = certPaths.split(",|;");
         for(String certPath: possibilities ) {

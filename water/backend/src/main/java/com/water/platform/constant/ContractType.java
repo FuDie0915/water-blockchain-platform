@@ -8,4 +8,5 @@ package com.water.platform.constant;
  */
 public final class ContractType {
     public final static String WATER = "水质";
+    public final static String KEY_VALUE_STORE = "键值存储";
 }

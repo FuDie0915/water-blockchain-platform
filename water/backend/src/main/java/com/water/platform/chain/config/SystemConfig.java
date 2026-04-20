@@ -19,6 +19,8 @@ public class SystemConfig {
 
   private String hexPrivateKey;
 
+  private boolean enabled = true;
+
   @NestedConfigurationProperty
   private ContractConfig contract;
 }

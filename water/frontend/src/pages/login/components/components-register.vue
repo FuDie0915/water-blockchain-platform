@@ -51,6 +51,29 @@
       </t-input>
     </t-form-item>
 
+    <t-form-item name="captchaCode">
+      <div class="captcha-row">
+        <t-input
+          v-model="formData.captchaCode"
+          size="large"
+          placeholder="请输入验证码"
+          class="captcha-input"
+        >
+          <template #prefix-icon>
+            <lock-on-icon />
+          </template>
+        </t-input>
+        <img
+          v-if="captchaImage"
+          :src="captchaImage"
+          class="captcha-image"
+          @click="refreshCaptcha"
+          title="点击刷新验证码"
+        />
+        <t-button v-else size="large" @click="refreshCaptcha" class="captcha-btn">获取验证码</t-button>
+      </div>
+    </t-form-item>
+
     <t-form-item>
       <t-button block size="large" type="submit" theme="primary" :loading="submitting">立即注册{{ roleText }}</t-button>
     </t-form-item>
@@ -60,17 +83,21 @@
 <script lang="ts">
 import Vue from 'vue';
 import { UserIcon, BrowseIcon, BrowseOffIcon, LockOnIcon } from 'tdesign-icons-vue';
+import { getCaptcha } from '@/api/water/user';
 
 const INITIAL_DATA = {
   userAccount: '',
   password: '',
   confirmPassword: '',
+  captchaKey: '',
+  captchaCode: '',
 };
 
 const FORM_RULES = {
   userAccount: [{ required: true, message: '请输入账号', type: 'error' }],
   password: [{ required: true, message: '请输入密码', type: 'error' }],
   confirmPassword: [{ required: true, message: '请再次输入密码', type: 'error' }],
+  captchaCode: [{ required: true, message: '请输入验证码', type: 'error' }],
 };
 
 const ROLE_TEXT_MAP = {
@@ -99,6 +126,7 @@ export default Vue.extend({
       showPsw: false,
       showConfirmPsw: false,
       submitting: false,
+      captchaImage: '',
     };
   },
   computed: {
@@ -114,7 +142,19 @@ export default Vue.extend({
         : '养殖户账号创建成功后，可直接进入水质监测、台账记录与预警页面。';
     },
   },
+  mounted() {
+    this.refreshCaptcha();
+  },
   methods: {
+    async refreshCaptcha() {
+      try {
+        const { data } = await getCaptcha();
+        this.captchaImage = data?.imageBase64 || '';
+        this.formData.captchaKey = data?.captchaKey || '';
+      } catch (error) {
+        console.error('获取验证码失败', error);
+      }
+    },
     async onSubmit({ validateResult }: { validateResult: boolean }) {
       if (validateResult !== true) return;
 
@@ -129,6 +169,8 @@ export default Vue.extend({
           userAccount: this.formData.userAccount,
           userPassword: this.formData.password,
           roleType: this.role,
+          captchaKey: this.formData.captchaKey,
+          captchaCode: this.formData.captchaCode,
         });
         localStorage.setItem('platformUserAccount', this.formData.userAccount);
         localStorage.setItem('platformUserPassword', this.formData.password);
@@ -140,6 +182,7 @@ export default Vue.extend({
         });
       } catch (error) {
         this.$message.error(error?.message || '注册失败，请稍后重试');
+        this.refreshCaptcha();
       } finally {
         this.submitting = false;
       }
@@ -149,4 +192,23 @@ export default Vue.extend({
 </script>
 
 <style scoped lang="less">
+.captcha-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+.captcha-input {
+  flex: 1;
+}
+.captcha-image {
+  width: 120px;
+  height: 40px;
+  cursor: pointer;
+  border-radius: 4px;
+  object-fit: contain;
+  background: #f5f5f5;
+}
+.captcha-btn {
+  width: 120px;
+}
 </style>

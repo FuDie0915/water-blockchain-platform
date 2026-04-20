@@ -369,7 +369,7 @@
           <t-row :gutter="[16, 16]" class="content-row">
             <t-col :xs="12" :lg="8">
               <t-card title="全域监管态势" :bordered="false" class="panel-card">
-                <div class="panel-tip">按片区查看养殖主体、水质风险、预警流转和日常监管重点，支持快速掌握全域监管态势。</div>
+                <div class="panel-tip">按片区查看养殖主体、水质风险、预警流转和日常监管重点，当前为前端假数据展示版。</div>
 
                 <div class="toolbar-row secondary">
                   <div class="pond-switcher">
@@ -747,7 +747,13 @@ import {
   waterInfoQuery,
   approvePermissionByManager,
   Login,
+  getThreshold,
 } from '@/api/water/water.js';
+import { getPondList, getManagerPondList } from '@/api/water/pond.js';
+import { getSeedList, getFeedList, getMedicineList, getHarvestList } from '@/api/water/farming-process.js';
+import { getManagerSeedList, getManagerFeedList, getManagerMedicineList, getManagerHarvestList } from '@/api/water/farming-process.js';
+import { getBindStatus, getManagerBindList } from '@/api/water/bind.js';
+import { getFarmerDashboard, getManagerDashboard } from '@/api/water/dashboard.js';
 import { TooltipComponent, LegendComponent, GridComponent } from 'echarts/components';
 import { LineChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -767,8 +773,8 @@ const MOCK_PERMIT_IMAGE = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent
     </defs>
     <rect width="120" height="120" rx="18" fill="url(#g)" />
     <rect x="20" y="18" width="80" height="84" rx="12" fill="#ffffff" stroke="#8db8f5" />
-    <text x="60" y="52" font-size="16" text-anchor="middle" fill="#1f74d8" font-family="Arial">许可证</text>
-    <text x="60" y="76" font-size="12" text-anchor="middle" fill="#4f6780" font-family="Arial">备案文件</text>
+    <text x="60" y="52" font-size="16" text-anchor="middle" fill="#1f74d8" font-family="Arial">Permit</text>
+    <text x="60" y="76" font-size="12" text-anchor="middle" fill="#4f6780" font-family="Arial">演示数据</text>
   </svg>
 `)}`;
 
@@ -1795,10 +1801,21 @@ export default {
       this.userType = userType;
       this.currentUser = userType === 'enterprise' ? '养殖户用户' : '监管局用户';
       this.currentView = userType === 'monitor' ? 'dashboard' : 'approval';
-      await this.fetchPermissionList();
+
+      // 加载基础数据
+      await Promise.all([
+        this.fetchPermissionList(),
+        this.fetchPondList(),
+        this.fetchDashboardData(),
+      ]);
+
       if (userType === 'monitor') {
         await this.fetchWaterData();
       }
+
+      // 加载养殖过程数据
+      await this.fetchFarmingProcessData();
+
       this.isLoggedIn = true;
       if (userType === 'enterprise') {
         this.$nextTick(() => {
@@ -1859,7 +1876,7 @@ export default {
       }
 
       await this.initRoleWorkbench(userType);
-      this.$message.warning(`${userType === 'enterprise' ? '养殖户端' : '监管端'}接口暂不可用，已切换为工作台浏览模式`);
+      this.$message.warning(`${userType === 'enterprise' ? '养殖户端' : '监管端'}接口暂不可用，已进入前端演示模式`);
       return true;
     },
     async autoEnterByRoute() {
@@ -2385,7 +2402,7 @@ export default {
       return '指标处于正常范围，可继续保持当前养殖管理。';
     },
     showPondAddTip() {
-      this.$message.info('新增养殖池功能正在配置中，请稍后再试。');
+      this.$message.info('当前为前端展示版，新增养殖池入口样式已预留。');
     },
     showManualEntryDialog() {
       this.manualEntryDialogVisible = true;
@@ -2522,7 +2539,7 @@ export default {
 
         this.applyMockPermissionList();
       } catch (error) {
-        console.error('获取许可证列表失败，已切换为备用数据:', error);
+        console.error('获取许可证列表失败，已切换为演示数据:', error);
         this.applyMockPermissionList();
       }
     },
@@ -2647,13 +2664,13 @@ export default {
       const platformAccount = localStorage.getItem('platformUserAccount') || '';
       const platformPassword = localStorage.getItem('platformUserPassword') || '123456';
 
-      this.enterpriseAccount = this.enterpriseAccount || (platformRole === 'company' ? (platformAccount || 'yangzhi01') : 'yangzhi01');
+      this.enterpriseAccount = this.enterpriseAccount || (platformRole === 'company' ? (platformAccount || 'farmer_demo') : 'farmer_demo');
       this.enterprisePassword = this.enterprisePassword || platformPassword;
-      this.enterpriseBlockchainAddress = this.enterpriseBlockchainAddress || '0x8F3C21B9A74D56E0C12F9487B7D3A5E2109C44A1';
+      this.enterpriseBlockchainAddress = this.enterpriseBlockchainAddress || '0xFARMER-DEMO-001';
 
-      this.monitorAccount = this.monitorAccount || (platformRole === 'manager' ? (platformAccount || 'jianguan01') : 'jianguan01');
+      this.monitorAccount = this.monitorAccount || (platformRole === 'manager' ? (platformAccount || 'manager_demo') : 'manager_demo');
       this.monitorPassword = this.monitorPassword || platformPassword;
-      this.monitorBlockchainAddress = this.monitorBlockchainAddress || '0x7E2B19D4C6A813F2E95B4D6A2C0187D7A31F0C9B';
+      this.monitorBlockchainAddress = this.monitorBlockchainAddress || '0xMANAGER-DEMO-001';
     },
     async getAccountInfo() {
       try {
@@ -2666,7 +2683,7 @@ export default {
         this.monitorBlockchainAddress = data.managerAddress || this.monitorBlockchainAddress;
       } catch (error) {
         this.setDefaultAccountInfo();
-        console.warn('获取账号信息失败，已切换为默认账号信息:', error?.message || error);
+        console.warn('获取账号信息失败，已切换为本地演示账号信息:', error?.message || error);
       }
     },
     onTurbidityPageChange(current) {
@@ -2701,7 +2718,7 @@ export default {
         }
         this.applyMockWaterData('turbidity');
       } catch (error) {
-        console.error('获取浑浊度数据失败，已切换为备用数据:', error);
+        console.error('获取浑浊度数据失败，已切换为演示数据:', error);
         this.applyMockWaterData('turbidity');
       }
     },
@@ -2719,12 +2736,239 @@ export default {
         }
         this.applyMockWaterData('tds');
       } catch (error) {
-        console.error('获取 TDS 数据失败，已切换为备用数据:', error);
+        console.error('获取 TDS 数据失败，已切换为演示数据:', error);
         this.applyMockWaterData('tds');
       }
     },
     isRowDisabled(row) {
       return row.onChain === true;
+    },
+    async fetchPondList() {
+      try {
+        const res = this.userType === 'monitor' ? await getManagerPondList() : await getPondList();
+        if (res.code === 200 && res.data) {
+          const list = Array.isArray(res.data) ? res.data : res.data.records || [];
+          if (list.length > 0) {
+            this.pondOptions = list.map(item => ({
+              value: String(item.id),
+              label: item.pondName || item.name || `养殖池${item.id}`,
+              species: item.species || item.fishType || '',
+              status: item.status || 'PENDING',
+              farmerId: item.farmerId ? String(item.farmerId) : null,
+              farmerName: item.farmerName || item.userName || '',
+              farmName: item.farmName || '',
+            }));
+            this.activePondId = this.pondOptions[0]?.value || 'pond-1';
+          }
+        }
+      } catch (error) {
+        console.warn('加载养殖池列表失败，使用默认数据:', error);
+      }
+    },
+    async fetchDashboardData() {
+      try {
+        const res = this.userType === 'monitor' ? await getManagerDashboard() : await getFarmerDashboard();
+        if (res.code === 200 && res.data) {
+          const data = res.data;
+          // 更新看板统计数据
+          if (this.userType === 'monitor') {
+            // 监管端数据
+            if (data.pondList) {
+              this.regulatorPondSnapshots = data.pondList.map((item, index) => ({
+                id: item.id || index + 1,
+                regionCode: item.regionCode || 'east',
+                region: item.region || '默认片区',
+                companyName: item.farmerName || item.companyName || '养殖主体',
+                pondName: item.pondName || item.name,
+                doValue: item.doValue || 5.0,
+                phValue: item.phValue || 8.1,
+                salinity: item.salinity || 25,
+                score: item.score || 85,
+                warningCount: item.warningCount || 0,
+                statusText: item.status === 'APPROVED' ? '运行稳定' : '待审核',
+                theme: item.status === 'APPROVED' ? 'success' : 'warning',
+                lastUpload: item.lastUpload || '--',
+                note: item.note || '',
+              }));
+            }
+            if (data.farmerList) {
+              this.regulatorFarmerProfiles = data.farmerList.map((item, index) => ({
+                id: item.id || index + 1,
+                accountId: item.userAccount || `COMP-${1001 + index}`,
+                regionCode: item.regionCode || 'east',
+                region: item.region || '默认片区',
+                companyName: item.userName || item.companyName || '养殖主体',
+                pondCount: item.pondCount || 1,
+                latestUpload: item.latestUpload || '--',
+                licenseStatusText: item.licenseStatus === 'APPROVED' ? '许可证有效' : '待审批',
+                licenseTheme: item.licenseStatus === 'APPROVED' ? 'success' : 'warning',
+                chainRate: `${item.chainRate || 90}%`,
+                riskText: item.riskLevel || '低风险',
+                riskTheme: item.riskLevel === '高风险' ? 'danger' : (item.riskLevel === '中风险' ? 'warning' : 'success'),
+              }));
+            }
+            if (data.warningList) {
+              this.regulatorWarningItems = data.warningList.map((item, index) => ({
+                id: item.id || index + 1,
+                regionCode: item.regionCode || 'east',
+                region: item.region || '默认片区',
+                companyName: item.farmerName || '养殖主体',
+                pondName: item.pondName || '',
+                title: item.title || '预警事件',
+                levelText: item.level || '预警',
+                theme: item.level === '高风险' ? 'danger' : 'warning',
+                time: item.time || '--',
+                progress: item.progress || '待处理',
+                detail: item.detail || '',
+              }));
+            }
+          } else {
+            // 养殖户数据
+            if (data.metrics) {
+              // 更新水质指标
+              Object.keys(data.metrics).forEach(pondId => {
+                if (this.pondMetricsMap[pondId]) {
+                  const metrics = data.metrics[pondId];
+                  this.pondMetricsMap[pondId] = metrics.map(m => ({
+                    metricCode: m.metricCode || m.code,
+                    value: m.value,
+                    tip: m.tip || '',
+                  }));
+                }
+              });
+            }
+            if (data.warningList) {
+              this.warningTodoList = data.warningList.map((item, index) => ({
+                id: item.id || index + 1,
+                pondId: String(item.pondId) || 'pond-1',
+                pondName: item.pondName || '',
+                title: item.title || '',
+                type: item.type || 'water_quality',
+                level: item.level || 'warning',
+                levelText: item.levelText || '预警',
+                theme: item.level === 'danger' ? 'danger' : 'warning',
+                time: item.time || '--',
+                detail: item.detail || '',
+              }));
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('加载看板数据失败:', error);
+      }
+    },
+    async fetchFarmingProcessData() {
+      try {
+        const pondId = this.activePondId !== 'all' ? { pondId: this.activePondId } : {};
+
+        // 获取养殖过程数据用于存证时间线
+        const [seedRes, feedRes, medicineRes, harvestRes] = await Promise.all([
+          this.userType === 'monitor' ? getManagerSeedList(pondId) : getSeedList(pondId),
+          this.userType === 'monitor' ? getManagerFeedList(pondId) : getFeedList(pondId),
+          this.userType === 'monitor' ? getManagerMedicineList(pondId) : getMedicineList(pondId),
+          this.userType === 'monitor' ? getManagerHarvestList(pondId) : getHarvestList(pondId),
+        ]);
+
+        // 构建存证时间线
+        const timeline = [];
+
+        if (seedRes.code === 200 && seedRes.data) {
+          const list = Array.isArray(seedRes.data) ? seedRes.data : seedRes.data.records || [];
+          list.forEach(item => {
+            timeline.push({
+              id: `seed-${item.id}`,
+              pondId: String(item.pondId || ''),
+              pondName: item.pondName || '',
+              title: `苗种投放: ${item.category || ''}`,
+              time: item.date || item.createTime || '',
+              evidenceNo: `BC-SEED-${item.id}`,
+              onChain: item.status === 'APPROVED',
+              ownerName: item.farmerName || '',
+              contentTitle: '苗种投放记录',
+              chainTime: item.chainTime || item.updateTime || '',
+              hash: item.txHash || '',
+              blockHeight: item.blockNumber || '--',
+              description: `投放${item.quantity || ''}，来源${item.source || ''}`,
+              verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
+            });
+          });
+        }
+
+        if (feedRes.code === 200 && feedRes.data) {
+          const list = Array.isArray(feedRes.data) ? feedRes.data : feedRes.data.records || [];
+          list.forEach(item => {
+            timeline.push({
+              id: `feed-${item.id}`,
+              pondId: String(item.pondId || ''),
+              pondName: item.pondName || '',
+              title: `投喂记录: ${item.brand || ''}`,
+              time: `${item.date || ''} ${item.time || ''}`,
+              evidenceNo: `BC-FEED-${item.id}`,
+              onChain: item.status === 'APPROVED',
+              ownerName: item.farmerName || '',
+              contentTitle: '投喂记录',
+              chainTime: item.chainTime || item.updateTime || '',
+              hash: item.txHash || '',
+              blockHeight: item.blockNumber || '--',
+              description: `投喂${item.amount || ''}`,
+              verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
+            });
+          });
+        }
+
+        if (medicineRes.code === 200 && medicineRes.data) {
+          const list = Array.isArray(medicineRes.data) ? medicineRes.data : medicineRes.data.records || [];
+          list.forEach(item => {
+            timeline.push({
+              id: `medicine-${item.id}`,
+              pondId: String(item.pondId || ''),
+              pondName: item.pondName || '',
+              title: `用药记录: ${item.name || ''}`,
+              time: `${item.date || ''} ${item.time || ''}`,
+              evidenceNo: `BC-MED-${item.id}`,
+              onChain: item.status === 'APPROVED',
+              ownerName: item.farmerName || '',
+              contentTitle: '用药记录',
+              chainTime: item.chainTime || item.updateTime || '',
+              hash: item.txHash || '',
+              blockHeight: item.blockNumber || '--',
+              description: `${item.name || ''} ${item.dosage || ''}`,
+              verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
+            });
+          });
+        }
+
+        if (harvestRes.code === 200 && harvestRes.data) {
+          const list = Array.isArray(harvestRes.data) ? harvestRes.data : harvestRes.data.records || [];
+          list.forEach(item => {
+            timeline.push({
+              id: `harvest-${item.id}`,
+              pondId: String(item.pondId || ''),
+              pondName: item.pondName || '',
+              title: `收获记录: ${item.batchNo || ''}`,
+              time: `${item.date || ''} ${item.time || ''}`,
+              evidenceNo: `BC-HARVEST-${item.id}`,
+              onChain: item.status === 'APPROVED',
+              ownerName: item.farmerName || '',
+              contentTitle: '收获记录',
+              chainTime: item.chainTime || item.updateTime || '',
+              hash: item.txHash || '',
+              blockHeight: item.blockNumber || '--',
+              description: `收获${item.weight || ''}，去向${item.destination || ''}`,
+              verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
+            });
+          });
+        }
+
+        // 按时间排序
+        timeline.sort((a, b) => String(b.time).localeCompare(String(a.time)));
+
+        if (timeline.length > 0) {
+          this.traceabilityTimeline = timeline;
+        }
+      } catch (error) {
+        console.warn('加载养殖过程数据失败:', error);
+      }
     },
   },
 };

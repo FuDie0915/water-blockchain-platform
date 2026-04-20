@@ -39,13 +39,15 @@ public class TokenUtil {
     public static User getLoginUser() {
         RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
-        String token = request.getHeader("satoken");
+        String token = resolveToken(request);
         ThrowUtils.throwIf(StringUtils.isBlank(token), ErrorCode.HEADER_PARAMS_ERROR);
         Object userIdByToken = StpUtil.getLoginIdByToken(token);
         ThrowUtils.throwIf(Objects.isNull(userIdByToken), ErrorCode.NOT_LOGIN_ERROR);
         Long userId = Long.valueOf(userIdByToken.toString());
+        String role = StpUtil.getLoginDeviceByToken(token);
         return userMapper.selectOne(new LambdaQueryWrapper<User>()
-                .eq(User::getUserId, userId));
+                .eq(User::getUserId, userId)
+                .eq(User::getUserRole, role));
     }
 
     public static User getLoginUser(String token) {
@@ -62,10 +64,25 @@ public class TokenUtil {
     public static Long getLoginUserId() {
         RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
-        String token = request.getHeader("satoken");
+        String token = resolveToken(request);
         ThrowUtils.throwIf(StringUtils.isBlank(token), ErrorCode.HEADER_PARAMS_ERROR);
         Object userIdByToken = StpUtil.getLoginIdByToken(token);
         ThrowUtils.throwIf(Objects.isNull(userIdByToken), ErrorCode.NOT_LOGIN_ERROR);
         return Long.valueOf(userIdByToken.toString());
+    }
+
+    /**
+     * 从请求头中解析 token，依次检查 satoken、farmerstoken、managertoken
+     */
+    private static String resolveToken(HttpServletRequest request) {
+        String token = request.getHeader("satoken");
+        if (StringUtils.isNotBlank(token)) {
+            return token;
+        }
+        token = request.getHeader("farmerstoken");
+        if (StringUtils.isNotBlank(token)) {
+            return token;
+        }
+        return request.getHeader("managertoken");
     }
 }

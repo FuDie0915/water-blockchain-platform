@@ -25,23 +25,13 @@ import java.util.Objects;
 public class AuthInterceptor {
     /**
      * 执行拦截
-     *
-     * @param joinPoint
-     * @param authCheck
-     * @return
      */
     @Around("@annotation(authCheck)")
     public Object doInterceptor(ProceedingJoinPoint joinPoint, AuthCheck authCheck) throws Throwable {
         RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
-        String token;
-        if (UserRole.ADMIN.equals(authCheck.roleType())) {
-            token = request.getHeader("satoken");
-        } else if (UserRole.COMPANY.equals(authCheck.roleType())) {
-            token = request.getHeader("companytoken");
-        } else {
-            token = request.getHeader("managertoken");
-        }
+        // 统一从 satoken header 读取 token
+        String token = request.getHeader("satoken");
         ThrowUtils.throwIf(StringUtils.isBlank(token), ErrorCode.HEADER_PARAMS_ERROR);
         Object userIdByToken = StpUtil.getLoginIdByToken(token);
         ThrowUtils.throwIf(Objects.isNull(userIdByToken), ErrorCode.NOT_LOGIN_ERROR);
@@ -50,45 +40,4 @@ public class AuthInterceptor {
         // 通过权限校验，放行
         return joinPoint.proceed();
     }
-
-
-//    /**
-//     * 执行拦截
-//     *
-//     * @param joinPoint
-//     * @param authCheck
-//     * @return
-//     */
-//    @Around("@annotation(authCheck)")
-//    public Object doInterceptor(ProceedingJoinPoint joinPoint, AuthCheck authCheck) throws Throwable {
-//        String mustRole = authCheck.mustRole();
-//        RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
-//        HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
-//        // 当前登录用户
-//        OldUser loginUser = userService.getLoginUser(request);
-//        RoleTypeEnum mustRoleEnum = RoleTypeEnum.getEnumByValue(mustRole);
-//        // 不需要权限，放行
-//        if (mustRoleEnum == null) {
-//            return joinPoint.proceed();
-//        }
-//        // 必须有该权限才通过
-//        RoleTypeEnum userRoleEnum = RoleTypeEnum.getEnumByValue(loginUser.getUserRole());
-//        if (userRoleEnum == null) {
-//            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
-//        }
-//        // 如果被封号，直接拒绝
-//        if (RoleTypeEnum.BAN.equals(userRoleEnum)) {
-//            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
-//        }
-//        // 必须有管理员权限
-//        if (RoleTypeEnum.ADMIN.equals(mustRoleEnum)) {
-//            // 用户没有管理员权限，拒绝
-//            if (!RoleTypeEnum.ADMIN.equals(userRoleEnum)) {
-//                throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
-//            }
-//        }
-//        // 通过权限校验，放行
-//        return joinPoint.proceed();
-//    }
 }
-

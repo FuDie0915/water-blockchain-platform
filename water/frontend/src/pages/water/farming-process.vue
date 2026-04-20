@@ -33,28 +33,25 @@
     <t-row :gutter="[16, 16]" class="content-row">
       <t-col :xs="12" :lg="3">
         <t-card :title="sidePanelTitle" :bordered="false" class="panel-card side-panel">
-          <button
-            v-for="pond in visiblePondOptions"
-            :key="pond.value"
-            type="button"
-            class="pond-card"
-            :class="{ active: selectedPond === pond.value }"
-            @click="selectedPond = pond.value"
-          >
-            <div>
-              <div class="pond-card__name">{{ pond.label }}</div>
-              <div class="pond-card__type">{{ pond.farmName }} · {{ pond.farmerName }} · {{ pond.species }}</div>
-            </div>
-            <t-tag :theme="pond.status === '正常' ? 'success' : 'warning'" variant="light-outline">{{ pond.status }}</t-tag>
-          </button>
-        </t-card>
-
-        <t-card title="操作说明" :bordered="false" class="panel-card side-panel tip-panel">
-          <ul class="tip-list">
-            <li>支持按养殖池切换查看苗种投放、投喂、用药与收货记录。</li>
-            <li>可通过上方标签页快速切换不同过程台账。</li>
-            <li>右侧新增按钮可补录当前养殖池的过程记录。</li>
-          </ul>
+          <div v-if="loadingPonds" style="text-align: center; padding: 20px;">
+            <t-loading text="加载中..." />
+          </div>
+          <template v-else>
+            <button
+              v-for="pond in visiblePondOptions"
+              :key="pond.value"
+              type="button"
+              class="pond-card"
+              :class="{ active: selectedPond === pond.value }"
+              @click="selectedPond = pond.value"
+            >
+              <div>
+                <div class="pond-card__name">{{ pond.label }}</div>
+                <div class="pond-card__type">{{ pond.farmName }}{{ pond.farmerName ? ' · ' + pond.farmerName : '' }}{{ pond.species ? ' · ' + pond.species : '' }}</div>
+              </div>
+              <t-tag :theme="pond.status === '正常' || pond.status === 'APPROVED' ? 'success' : 'warning'" variant="light-outline">{{ pond.statusText || pond.status }}</t-tag>
+            </button>
+          </template>
         </t-card>
       </t-col>
 
@@ -70,7 +67,6 @@
             </t-tabs>
 
             <div class="toolbar-actions">
-              <t-tag v-if="isMonitorView" theme="warning" variant="light-outline">监管总览</t-tag>
               <t-button v-if="!isMonitorView" theme="primary" @click="openCreateDialog">{{ currentCreateLabel }}</t-button>
             </div>
           </div>
@@ -128,8 +124,6 @@
                   <t-tag :theme="stage.theme" variant="light-outline">{{ stage.status }}</t-tag>
                 </div>
               </div>
-
-
             </div>
           </template>
 
@@ -153,7 +147,9 @@
               </div>
             </div>
 
+            <t-loading v-if="loadingData" text="加载中..." />
             <t-table
+              v-else
               row-key="id"
               bordered
               hover
@@ -161,7 +157,7 @@
               max-height="520"
               :data="filteredCurrentData"
               :columns="currentColumns"
-              :empty="'暂无记录'"
+              :empty="'暂无数据'"
             />
           </template>
         </t-card>
@@ -191,7 +187,7 @@
       v-if="!isMonitorView"
       :visible.sync="dialogVisible"
       :header="currentCreateLabel"
-      :confirm-btn="{ content: '保存记录', theme: 'primary' }"
+      :confirm-btn="{ content: '保存', theme: 'primary', loading: submitting }"
       :cancel-btn="{ content: '取消' }"
       width="560px"
       @confirm="handleCreateRecord"
@@ -201,12 +197,12 @@
         <t-row :gutter="[12, 12]">
           <t-col :span="6">
             <t-form-item label="日期">
-              <t-input v-model="formModel.date" placeholder="如 2026-04-07" />
+              <t-date-picker v-model="formModel.date" clearable />
             </t-form-item>
           </t-col>
           <t-col :span="6">
             <t-form-item label="时间">
-              <t-input v-model="formModel.time" placeholder="如 09:30" />
+              <t-time-picker v-model="formModel.time" format="HH:mm" clearable />
             </t-form-item>
           </t-col>
           <t-col :span="6">
@@ -241,13 +237,28 @@
 </template>
 
 <script>
+import { getPondList, getManagerPondList } from '@/api/water/pond';
+import { getSeedList, createSeed, getManagerSeedList } from '@/api/water/seed';
+import { getFeedList, createFeed, getManagerFeedList } from '@/api/water/feed';
+import { getMedicineList, createMedicine, getManagerMedicineList } from '@/api/water/medicine';
+import { getHarvestList, createHarvest, getManagerHarvestList } from '@/api/water/harvest';
+
 const STATUS_THEME_MAP = {
-  已上链: 'success',
-  待上链: 'warning',
-  已完成: 'success',
-  待确认: 'warning',
-  正常: 'success',
-  关注: 'warning',
+  '已上链': 'success',
+  '待上链': 'warning',
+  '已完成': 'success',
+  '待确认': 'warning',
+  '正常': 'success',
+  '关注': 'warning',
+  'APPROVED': 'success',
+  'PENDING': 'warning',
+  'REJECTED': 'danger',
+};
+
+const STATUS_TEXT_MAP = {
+  'APPROVED': '已上链',
+  'PENDING': '待上链',
+  'REJECTED': '已拒绝',
 };
 
 const MONITOR_EXTRA_COLUMNS = [
@@ -260,12 +271,15 @@ function createStatusColumn() {
     colKey: 'status',
     title: '上链状态',
     width: 110,
-    cell: (h, { row }) => h('t-tag', {
-      props: {
-        theme: STATUS_THEME_MAP[row.status] || 'primary',
-        variant: 'light-outline',
-      },
-    }, row.status || '--'),
+    cell: (h, { row }) => {
+      const statusText = STATUS_TEXT_MAP[row.status] || row.status || '--';
+      return h('t-tag', {
+        props: {
+          theme: STATUS_THEME_MAP[row.status] || 'primary',
+          variant: 'light-outline',
+        },
+      }, statusText);
+    },
   };
 }
 
@@ -324,43 +338,23 @@ export default {
       selectedFarmer: 'all',
       selectedPond: 'all',
       dialogVisible: false,
-      companyFarmerId: 'farmer-1',
-      pondOptions: [
-        { value: 'pond-1', label: '一号塘', species: '南美白对虾', status: '正常', farmerId: 'farmer-1', farmerName: '李大海', farmName: '大海养殖场' },
-        { value: 'pond-2', label: '二号塘', species: '石斑鱼', status: '正常', farmerId: 'farmer-2', farmerName: '王五', farmName: '王氏养殖场' },
-        { value: 'pond-3', label: '三号塘', species: '大黄鱼', status: '关注', farmerId: 'farmer-3', farmerName: '张渔业', farmName: '张记水产' },
-        { value: 'pond-4', label: '四号塘', species: '南美白对虾', status: '正常', farmerId: 'farmer-1', farmerName: '李大海', farmName: '大海养殖场' },
-      ],
+      submitting: false,
+      loadingPonds: false,
+      loadingData: false,
+      pondOptions: [],
+      seedRecords: [],
+      feedRecords: [],
+      medicineRecords: [],
+      harvestRecords: [],
       seedBaseColumns,
       feedBaseColumns,
       medicineBaseColumns,
       harvestBaseColumns,
-      seedRecords: [
-        { id: 1, farmerId: 'farmer-1', farmerName: '李大海', farmName: '大海养殖场', pondId: 'pond-1', pondName: '一号塘', date: '2026-04-06', time: '09:10', batchNo: 'MZ-20260406-01', category: '南美白对虾苗', quantity: '12000尾', source: '海丰苗种场', operator: '李大海', status: '已上链', remark: '苗种来源与检疫证明已登记' },
-        { id: 2, farmerId: 'farmer-2', farmerName: '王五', farmName: '王氏养殖场', pondId: 'pond-2', pondName: '二号塘', date: '2026-04-04', time: '08:45', batchNo: 'MZ-20260404-02', category: '石斑鱼苗', quantity: '8600尾', source: '滨海育苗基地', operator: '王五', status: '已上链', remark: '按计划完成首批投放' },
-        { id: 3, farmerId: 'farmer-3', farmerName: '张渔业', farmName: '张记水产', pondId: 'pond-3', pondName: '三号塘', date: '2026-04-03', time: '10:20', batchNo: 'MZ-20260403-03', category: '大黄鱼苗', quantity: '9000尾', source: '蓝湾苗种合作社', operator: '王海峰', status: '待上链', remark: '等待来源凭证确认' },
-      ],
-      feedRecords: [
-        { id: 1, farmerId: 'farmer-1', farmerName: '李大海', farmName: '大海养殖场', pondId: 'pond-1', pondName: '一号塘', date: '2026-04-06', time: '08:40', brand: 'ZZ牌水产饲料', amount: '52kg', operator: '李大海', remark: '根据天气调整投喂量', status: '已上链' },
-        { id: 2, farmerId: 'farmer-2', farmerName: '王五', farmName: '王氏养殖场', pondId: 'pond-2', pondName: '二号塘', date: '2026-04-05', time: '08:57', brand: 'ZZ牌石斑鱼饲料', amount: '64kg', operator: '王五', remark: '早晚两次均衡投喂', status: '已上链' },
-        { id: 3, farmerId: 'farmer-3', farmerName: '张渔业', farmName: '张记水产', pondId: 'pond-3', pondName: '三号塘', date: '2026-04-04', time: '08:39', brand: 'YY牌优质饲料', amount: '72kg', operator: '王海峰', remark: '增氧后补充投喂', status: '已上链' },
-        { id: 4, farmerId: 'farmer-1', farmerName: '李大海', farmName: '大海养殖场', pondId: 'pond-4', pondName: '四号塘', date: '2026-04-03', time: '08:36', brand: 'XX牌虾饲料', amount: '66kg', operator: '李大海', remark: '夜间水温较低，适当减量', status: '待上链' },
-      ],
-      medicineRecords: [
-        { id: 1, farmerId: 'farmer-2', farmerName: '王五', farmName: '王氏养殖场', pondId: 'pond-2', pondName: '二号塘', date: '2026-04-06', time: '14:20', name: '维生素C拌料', dosage: '2kg', purpose: '增强抗应激', withdrawal: '0天', operator: '张海龙', status: '已上链', remark: '用于换水后恢复体质' },
-        { id: 2, farmerId: 'farmer-3', farmerName: '张渔业', farmName: '张记水产', pondId: 'pond-3', pondName: '三号塘', date: '2026-04-05', time: '09:45', name: '微生态制剂', dosage: '1.5kg', purpose: '调节水体菌相', withdrawal: '0天', operator: '王海峰', status: '已上链', remark: '例行维护' },
-        { id: 3, farmerId: 'farmer-1', farmerName: '李大海', farmName: '大海养殖场', pondId: 'pond-4', pondName: '四号塘', date: '2026-04-04', time: '16:10', name: '消毒片', dosage: '20片', purpose: '器具消杀', withdrawal: '3天', operator: '李大海', status: '待上链', remark: '等待班组复核' },
-      ],
-      harvestRecords: [
-        { id: 1, farmerId: 'farmer-1', farmerName: '李大海', farmName: '大海养殖场', pondId: 'pond-1', pondName: '一号塘', date: '2026-04-06', time: '15:30', batchNo: 'SH-20260406-01', spec: '30尾/斤', weight: '680kg', destination: '滨海冷链中心', operator: '周验收', status: '已上链', remark: '首批收货已完成称重验收' },
-        { id: 2, farmerId: 'farmer-2', farmerName: '王五', farmName: '王氏养殖场', pondId: 'pond-2', pondName: '二号塘', date: '2026-04-05', time: '11:10', batchNo: 'SH-20260405-02', spec: '1.2kg/尾', weight: '420kg', destination: '东港批发市场', operator: '陈晓东', status: '已上链', remark: '品相良好，已完成交接' },
-        { id: 3, farmerId: 'farmer-3', farmerName: '张渔业', farmName: '张记水产', pondId: 'pond-3', pondName: '三号塘', date: '2026-04-03', time: '13:40', batchNo: 'SH-20260403-03', spec: '0.8kg/尾', weight: '350kg', destination: '海兴食品厂', operator: '王海峰', status: '待确认', remark: '等待冷链回执上传' },
-      ],
       formModel: {
-        date: '2026-04-07',
-        time: '09:30',
-        pondId: 'pond-1',
-        operator: '李大海',
+        date: '',
+        time: '',
+        pondId: '',
+        operator: '',
         primaryValue: '',
         secondaryValue: '',
         remark: '',
@@ -376,7 +370,7 @@ export default {
       return this.currentRoleCode === 'manager';
     },
     pageBadge() {
-      return this.isMonitorView ? '监管端 · 全量总览' : '养殖户端 · 过程台账';
+      return this.isMonitorView ? '监管端 · 全量总览' : '养殖户端';
     },
     pageTitle() {
       return this.isMonitorView ? '养殖过程监管' : '养殖过程管理';
@@ -384,15 +378,15 @@ export default {
     pageDescription() {
       return this.isMonitorView
         ? '监管端可查看全部养殖户的苗种投放、投喂、用药与收货台账。'
-        : '覆盖苗种投放、投喂记录、用药记录、收货记录，支持按养殖池查看全过程台账。';
+        : '覆盖苗种投放、投喂记录、用药记录、收货记录。';
     },
     sidePanelTitle() {
       return this.isMonitorView ? '监管养殖池总览' : '我的养殖池';
     },
     farmerFilterOptions() {
       const uniqueFarmers = this.pondOptions.reduce((result, item) => {
-        if (!result.find((option) => option.value === item.farmerId)) {
-          result.push({ label: `${item.farmerName} · ${item.farmName}`, value: item.farmerId });
+        if (item.farmerId && !result.find((option) => option.value === item.farmerId)) {
+          result.push({ label: `${item.farmerName || ''} · ${item.farmName || ''}`, value: item.farmerId });
         }
         return result;
       }, []);
@@ -401,14 +395,18 @@ export default {
     visiblePondOptions() {
       let options = [...this.pondOptions];
       if (!this.isMonitorView) {
-        options = options.filter((item) => item.farmerId === this.companyFarmerId);
+        // 养殖户只看自己的养殖池
+        options = options; // 后端已根据用户过滤
       } else if (this.selectedFarmer !== 'all') {
         options = options.filter((item) => item.farmerId === this.selectedFarmer);
       }
-      return options;
+      return options.map(item => ({
+        ...item,
+        statusText: STATUS_TEXT_MAP[item.status] || item.status,
+      }));
     },
     pondFilterOptions() {
-      return [{ label: '全部养殖池', value: 'all' }, ...this.visiblePondOptions.map((item) => ({ label: `${item.label} · ${item.farmerName}`, value: item.value }))];
+      return [{ label: '全部养殖池', value: 'all' }, ...this.visiblePondOptions.map((item) => ({ label: `${item.label} · ${item.farmerName || ''}`, value: item.value }))];
     },
     pondSelectOptions() {
       return this.visiblePondOptions.map((item) => ({ label: item.label, value: item.value }));
@@ -459,12 +457,9 @@ export default {
       };
       return map[this.activeTab] || [];
     },
-    roleScopedData() {
-      return this.filterRecordsByCurrentScope(this.currentData);
-    },
     filteredCurrentData() {
-      if (this.selectedPond === 'all') return this.roleScopedData;
-      return this.roleScopedData.filter((item) => item.pondId === this.selectedPond);
+      if (this.selectedPond === 'all') return this.currentData;
+      return this.currentData.filter((item) => item.pondId === this.selectedPond);
     },
     scopedSeedRecords() {
       return this.filterRecordsByCurrentScope(this.seedRecords);
@@ -490,7 +485,7 @@ export default {
         ...this.scopedMedicineRecords,
         ...this.scopedHarvestRecords,
       ];
-      const allOnChain = totalScopedRecords.length > 0 && totalScopedRecords.every((item) => ['已上链', '已完成'].includes(item.status));
+      const allOnChain = totalScopedRecords.length > 0 && totalScopedRecords.every((item) => ['APPROVED', '已上链', '已完成'].includes(item.status));
       const seedDate = firstSeed.date || '--';
       const growthDays = firstSeed.date
         ? `${Math.max(1, Math.ceil((Date.now() - new Date(firstSeed.date).getTime()) / (1000 * 60 * 60 * 24)))}天`
@@ -512,8 +507,8 @@ export default {
       const buildStage = (title, records, description) => ({
         title,
         description,
-        status: !records.length ? '暂无记录' : (records.every((item) => ['已上链', '已完成'].includes(item.status)) ? '已上链' : '待补链'),
-        theme: !records.length ? 'default' : (records.every((item) => ['已上链', '已完成'].includes(item.status)) ? 'success' : 'warning'),
+        status: !records.length ? '暂无记录' : (records.every((item) => ['APPROVED', '已上链', '已完成'].includes(item.status)) ? '已上链' : '待补链'),
+        theme: !records.length ? 'default' : (records.every((item) => ['APPROVED', '已上链', '已完成'].includes(item.status)) ? 'success' : 'warning'),
       });
 
       return [
@@ -530,15 +525,13 @@ export default {
       return `当前养殖池：${this.selectedPondLabel}，共 ${this.filteredCurrentData.length} 条记录。`;
     },
     summaryCards() {
-      const scopeRecords = this.isMonitorView
-        ? [...this.seedRecords, ...this.feedRecords, ...this.medicineRecords, ...this.harvestRecords]
-        : [...this.seedRecords, ...this.feedRecords, ...this.medicineRecords, ...this.harvestRecords].filter((item) => item.farmerId === this.companyFarmerId);
-      const scopeFeedRecords = this.isMonitorView ? this.feedRecords : this.feedRecords.filter((item) => item.farmerId === this.companyFarmerId);
+      const scopeRecords = [...this.seedRecords, ...this.feedRecords, ...this.medicineRecords, ...this.harvestRecords];
+      const scopeFeedRecords = this.feedRecords;
       const totalFeed = scopeFeedRecords.reduce((sum, item) => sum + Number(String(item.amount).replace(/[^\d.]/g, '') || 0), 0);
-      const onChainCount = scopeRecords.filter((item) => item.status === '已上链').length;
-      const scopePonds = this.isMonitorView ? this.pondOptions : this.pondOptions.filter((item) => item.farmerId === this.companyFarmerId);
-      const uniqueFarmers = new Set(scopePonds.map((item) => item.farmerId)).size;
-      const warningPonds = scopePonds.filter((item) => item.status !== '正常').length;
+      const onChainCount = scopeRecords.filter((item) => item.status === 'APPROVED' || item.status === '已上链').length;
+      const scopePonds = this.pondOptions;
+      const uniqueFarmers = new Set(scopePonds.map((item) => item.farmerId).filter(Boolean)).size;
+      const warningPonds = scopePonds.filter((item) => item.status !== '正常' && item.status !== 'APPROVED').length;
 
       if (this.isMonitorView) {
         return [
@@ -550,28 +543,26 @@ export default {
       }
 
       return [
-        { title: '苗种投放批次', value: `${this.seedRecords.filter((item) => item.farmerId === this.companyFarmerId).length}批`, description: '已登记的投苗批次' },
-        { title: '累计投喂量', value: `${totalFeed}kg`, description: '当前累计投喂统计值' },
-        { title: '用药记录数', value: `${this.medicineRecords.filter((item) => item.farmerId === this.companyFarmerId).length}次`, description: '含常规维护与应急处置' },
+        { title: '苗种投放批次', value: `${this.seedRecords.length}批`, description: '已登记的投苗批次' },
+        { title: '累计投喂量', value: `${totalFeed}kg`, description: '投喂总量统计值' },
+        { title: '用药记录数', value: `${this.medicineRecords.length}次`, description: '含常规维护与应急处置' },
         { title: '已上链台账', value: `${onChainCount}条`, description: '展示区块链存证状态' },
       ];
     },
     latestTimeline() {
-      const scopeRecords = this.isMonitorView
-        ? [...this.seedRecords, ...this.feedRecords, ...this.medicineRecords, ...this.harvestRecords]
-        : [...this.seedRecords, ...this.feedRecords, ...this.medicineRecords, ...this.harvestRecords].filter((item) => item.farmerId === this.companyFarmerId);
+      const scopeRecords = [...this.seedRecords, ...this.feedRecords, ...this.medicineRecords, ...this.harvestRecords];
 
       return scopeRecords
         .map((item) => ({
           id: `${this.getRecordType(item)}-${item.id}`,
           title: `${this.getRecordType(item)} · ${item.pondName}`,
-          time: `${item.date} ${item.time}`,
+          time: `${item.date} ${item.time || ''}`,
           pondName: item.pondName,
           farmerName: item.farmerName,
           farmName: item.farmName,
           operator: item.operator,
-          remark: item.remark || '已录入过程说明',
-          status: item.status,
+          remark: item.remark || '',
+          status: STATUS_TEXT_MAP[item.status] || item.status,
         }))
         .sort((a, b) => `${b.time}`.localeCompare(a.time))
         .slice(0, 6);
@@ -579,9 +570,9 @@ export default {
     formFieldLabels() {
       const map = {
         seed: { primary: '苗种类型', secondary: '投放数量' },
-        feed: { primary: '饲料品牌', secondary: '投喂量' },
+        feed: { primary: '饲料品牌', secondary: '投喂量(kg)' },
         medicine: { primary: '药品名称', secondary: '剂量' },
-        harvest: { primary: '收货批次', secondary: '重量' },
+        harvest: { primary: '收货批次', secondary: '重量(kg)' },
       };
       return map[this.activeTab] || { primary: '主字段', secondary: '补充字段' };
     },
@@ -592,26 +583,120 @@ export default {
         this.selectedPond = 'all';
       }
       this.resetForm();
+      this.loadAllData();
+    },
+    selectedPond() {
+      // 切换养殖池时重新加载当前tab数据
+      this.loadCurrentTabData();
     },
   },
   mounted() {
     if (this.isMonitorView) {
       this.activeTab = 'trace';
-    } else {
-      this.selectedPond = this.visiblePondOptions[0]?.value || 'all';
     }
-    this.resetForm();
+    this.loadPonds();
+    this.loadAllData();
   },
   methods: {
+    async loadPonds() {
+      this.loadingPonds = true;
+      try {
+        const res = this.isMonitorView ? await getManagerPondList() : await getPondList();
+        if (res.code === 200 && res.data) {
+          this.pondOptions = (Array.isArray(res.data) ? res.data : res.data.records || []).map(item => ({
+            value: String(item.id),
+            label: item.pondName || item.name || `养殖池${item.id}`,
+            species: item.species || item.fishType || '',
+            status: item.status || 'PENDING',
+            farmerId: item.farmerId ? String(item.farmerId) : null,
+            farmerName: item.farmerName || item.userName || '',
+            farmName: item.farmName || '',
+          }));
+          if (!this.isMonitorView && this.pondOptions.length > 0) {
+            this.selectedPond = this.pondOptions[0].value;
+          }
+        }
+      } catch (error) {
+        console.error('加载养殖池失败:', error);
+        this.$message.error('加载养殖池失败');
+      } finally {
+        this.loadingPonds = false;
+      }
+    },
+    async loadAllData() {
+      this.loadingData = true;
+      try {
+        const params = this.selectedPond !== 'all' ? { pondId: this.selectedPond } : {};
+
+        const [seedRes, feedRes, medicineRes, harvestRes] = await Promise.all([
+          this.isMonitorView ? getManagerSeedList(params) : getSeedList(params),
+          this.isMonitorView ? getManagerFeedList(params) : getFeedList(params),
+          this.isMonitorView ? getManagerMedicineList(params) : getMedicineList(params),
+          this.isMonitorView ? getManagerHarvestList(params) : getHarvestList(params),
+        ]);
+
+        this.seedRecords = this.parseListResponse(seedRes);
+        this.feedRecords = this.parseListResponse(feedRes);
+        this.medicineRecords = this.parseListResponse(medicineRes);
+        this.harvestRecords = this.parseListResponse(harvestRes);
+      } catch (error) {
+        console.error('加载数据失败:', error);
+      } finally {
+        this.loadingData = false;
+      }
+    },
+    async loadCurrentTabData() {
+      this.loadingData = true;
+      const params = this.selectedPond !== 'all' ? { pondId: this.selectedPond } : {};
+
+      try {
+        let res;
+        switch (this.activeTab) {
+          case 'seed':
+            res = await (this.isMonitorView ? getManagerSeedList(params) : getSeedList(params));
+            this.seedRecords = this.parseListResponse(res);
+            break;
+          case 'feed':
+            res = await (this.isMonitorView ? getManagerFeedList(params) : getFeedList(params));
+            this.feedRecords = this.parseListResponse(res);
+            break;
+          case 'medicine':
+            res = await (this.isMonitorView ? getManagerMedicineList(params) : getMedicineList(params));
+            this.medicineRecords = this.parseListResponse(res);
+            break;
+          case 'harvest':
+            res = await (this.isMonitorView ? getManagerHarvestList(params) : getHarvestList(params));
+            this.harvestRecords = this.parseListResponse(res);
+            break;
+        }
+      } catch (error) {
+        console.error('加载数据失败:', error);
+      } finally {
+        this.loadingData = false;
+      }
+    },
+    parseListResponse(res) {
+      if (res.code === 200 && res.data) {
+        const list = Array.isArray(res.data) ? res.data : res.data.records || [];
+        return list.map(item => ({
+          ...item,
+          id: item.id,
+          pondId: String(item.pondId || ''),
+          pondName: item.pondName || '',
+          farmerId: item.farmerId ? String(item.farmerId) : null,
+          farmerName: item.farmerName || item.userName || '',
+          farmName: item.farmName || '',
+          date: item.date || item.createTime?.split(' ')[0] || '',
+          time: item.time || item.createTime?.split(' ')[1]?.substring(0, 5) || '',
+        }));
+      }
+      return [];
+    },
     filterRecordsByCurrentScope(records) {
       let result = Array.isArray(records) ? [...records] : [];
 
-      if (this.isMonitorView) {
-        if (this.selectedFarmer !== 'all') {
-          result = result.filter((item) => item.farmerId === this.selectedFarmer);
-        }
-      } else {
-        result = result.filter((item) => item.farmerId === this.companyFarmerId);
+      if (this.isMonitorView && this.selectedFarmer !== 'all') {
+        result = result.filter((item) => item.farmerId === this.selectedFarmer);
       }
 
       if (this.selectedPond !== 'all') {
@@ -631,6 +716,7 @@ export default {
     handleTabChange(value) {
       this.activeTab = value;
       this.resetForm();
+      this.loadCurrentTabData();
     },
     openCreateDialog() {
       if (this.isMonitorView) {
@@ -644,82 +730,88 @@ export default {
     },
     resetForm() {
       this.formModel = {
-        date: '2026-04-07',
-        time: '09:30',
-        pondId: this.selectedPond === 'all' ? (this.visiblePondOptions[0]?.value || 'pond-1') : this.selectedPond,
-        operator: '李大海',
+        date: new Date().toISOString().split('T')[0],
+        time: '',
+        pondId: this.selectedPond === 'all' ? (this.visiblePondOptions[0]?.value || '') : this.selectedPond,
+        operator: '',
         primaryValue: '',
         secondaryValue: '',
         remark: '',
       };
     },
     getRecordType(item) {
-      if (item.batchNo && item.category) return '苗种投放';
+      if (item.batchNo && (item.category || item.spec)) return '苗种投放';
       if (item.brand) return '投喂记录';
-      if (item.withdrawal) return '用药记录';
+      if (item.withdrawal || item.name) return '用药记录';
       return '收货记录';
     },
-    handleCreateRecord() {
+    async handleCreateRecord() {
       if (this.isMonitorView) {
         return;
       }
 
       const { date, time, pondId, operator, primaryValue, secondaryValue, remark } = this.formModel;
-      if (!date || !time || !pondId || !operator || !primaryValue || !secondaryValue) {
-        this.$message.warning('请先补全必填信息');
+      if (!date || !pondId || !operator || !primaryValue || !secondaryValue) {
+        this.$message.warning('请先补全必要信息');
         return;
       }
 
-      const pondInfo = this.pondOptions.find((item) => item.value === pondId) || {};
-      const baseRecord = {
-        id: Date.now(),
-        farmerId: pondInfo.farmerId || this.companyFarmerId,
-        farmerName: pondInfo.farmerName || '李大海',
-        farmName: pondInfo.farmName || '大海养殖场',
-        pondId,
-        pondName: pondInfo.label || '养殖池',
-        date,
-        time,
-        operator,
-        remark: remark || '新增过程记录',
-        status: '待上链',
-      };
+      this.submitting = true;
+      try {
+        let res;
+        if (this.activeTab === 'seed') {
+          res = await createSeed({
+            pondId: Number(pondId),
+            recordDate: date,
+            manager: operator,
+            seedType: primaryValue,
+            weight: Number(secondaryValue),
+            remark: remark || '',
+          });
+        } else if (this.activeTab === 'feed') {
+          res = await createFeed({
+            pondId: Number(pondId),
+            feedDate: date,
+            manager: operator,
+            feedBrand: primaryValue,
+            feedAmount: Number(secondaryValue),
+            remark: remark || '',
+          });
+        } else if (this.activeTab === 'medicine') {
+          res = await createMedicine({
+            pondId: Number(pondId),
+            medicineDate: date,
+            manager: operator,
+            medicineName: primaryValue,
+            dosage: secondaryValue,
+            purpose: '日常维护',
+            remark: remark || '',
+          });
+        } else {
+          res = await createHarvest({
+            pondId: Number(pondId),
+            harvestDate: date,
+            manager: operator,
+            batchNo: primaryValue,
+            totalWeight: Number(secondaryValue),
+            remark: remark || '',
+          });
+        }
 
-      if (this.activeTab === 'seed') {
-        this.seedRecords.unshift({
-          ...baseRecord,
-          batchNo: `MZ-${date.replace(/-/g, '')}-${this.seedRecords.length + 1}`,
-          category: primaryValue,
-          quantity: secondaryValue,
-          source: '手动录入',
-        });
-      } else if (this.activeTab === 'feed') {
-        this.feedRecords.unshift({
-          ...baseRecord,
-          brand: primaryValue,
-          amount: secondaryValue,
-        });
-      } else if (this.activeTab === 'medicine') {
-        this.medicineRecords.unshift({
-          ...baseRecord,
-          name: primaryValue,
-          dosage: secondaryValue,
-          purpose: '日常维护',
-          withdrawal: '0天',
-        });
-      } else {
-        this.harvestRecords.unshift({
-          ...baseRecord,
-          batchNo: primaryValue,
-          spec: '标准规格',
-          weight: secondaryValue,
-          destination: '默认收货点',
-        });
+        if (res.code === 200) {
+          this.$message.success(`${this.currentTabLabel}记录已创建`);
+          this.dialogVisible = false;
+          this.resetForm();
+          await this.loadCurrentTabData();
+        } else {
+          this.$message.error(res.message || '创建失败');
+        }
+      } catch (error) {
+        console.error('创建记录失败:', error);
+        this.$message.error('创建记录失败');
+      } finally {
+        this.submitting = false;
       }
-
-      this.dialogVisible = false;
-      this.$message.success(`${this.currentTabLabel}已新增`);
-      this.resetForm();
     },
     goBackWorkbench() {
       const target = this.isMonitorView ? '/water/monitor-login' : '/water/enterprise-login';
@@ -847,16 +939,6 @@ export default {
   margin-top: 4px;
   font-size: 12px;
   color: #7b8794;
-}
-
-.tip-list {
-  padding-left: 18px;
-  margin: 0;
-  color: #5f6b7a;
-
-  li + li {
-    margin-top: 8px;
-  }
 }
 
 .toolbar-row,

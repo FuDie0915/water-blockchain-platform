@@ -2,44 +2,56 @@ import request from '@/utils/request';
 
 // 用户登录（多角色入口）
 export function login(data) {
-  const account = (data.userAccount || '').trim().toLowerCase();
-  if (account === 'admin') {
+  const roleType = data.roleType || 'company';
+
+  // 根据角色选择不同的登录接口
+  if (roleType === 'admin' || data.userAccount === 'admin') {
     return request({
-      url: '/gk_api/user/loginOrRegister',
+      url: '/gk_api/user/login/admin',
       method: 'post',
       data: {
         userAccount: data.userAccount,
         userPassword: data.userPassword,
-        userName: 'platform',
-        userRole: 'admin',
       },
     });
   }
 
-  const roleType = data.roleType || 'company';
-  const loginType = roleType === 'manager' ? 1 : 0;
+  if (roleType === 'manager') {
+    return request({
+      url: '/gk_api/user/login/manager',
+      method: 'post',
+      data: {
+        userAccount: data.userAccount,
+        userPassword: data.userPassword,
+      },
+    });
+  }
 
+  // 默认为养殖户登录
   return request({
-    url: '/gk_api/water/user/login',
+    url: '/gk_api/user/login/farmers',
     method: 'post',
     data: {
       userAccount: data.userAccount,
       userPassword: data.userPassword,
-      loginType,
     },
   });
 }
 
 // 用户注册（仅养殖户 / 监管端）
 export function register(data) {
+  const roleType = data.roleType || 'company';
+  const url = roleType === 'manager' ? '/gk_api/user/register/manager' : '/gk_api/user/register/farmers';
+
   return request({
-    url: '/gk_api/user/register',
+    url: url,
     method: 'post',
     data: {
       userAccount: data.userAccount,
       userPassword: data.userPassword,
       userName: data.userName || '',
-      userRole: data.roleType,
+      captchaKey: data.captchaKey || '',
+      captchaCode: data.captchaCode || '',
     },
   });
 }

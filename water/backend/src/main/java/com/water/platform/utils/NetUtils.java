@@ -1,8 +1,7 @@
 package com.water.platform.utils;
 
-import jakarta.servlet.http.HttpServletRequest;
-
 import java.net.InetAddress;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 网络工具类

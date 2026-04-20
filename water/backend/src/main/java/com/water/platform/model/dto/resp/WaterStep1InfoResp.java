@@ -5,8 +5,6 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
-
 /**
  * @author ：devon
  * @date ：2024/11/16 11:44
@@ -18,16 +16,12 @@ import javax.validation.constraints.NotBlank;
 @AllArgsConstructor
 public class WaterStep1InfoResp {
 
-    @ApiModelProperty(value = "企业账号")
+    @ApiModelProperty(value = "养殖户账号")
     private String companyAccount;
-    @ApiModelProperty(value = "企业密码")
-    private String companyPassword;
-    @ApiModelProperty(value = "企业区块链账户地址")
+    @ApiModelProperty(value = "养殖户区块链账户地址")
     private String companyAddress;
     @ApiModelProperty(value = "监管局账号")
     private String managerAccount;
-    @ApiModelProperty(value = "监管局密码")
-    private String managerPassword;
     @ApiModelProperty(value = "监管局区块链账户地址")
     private String managerAddress;
 }

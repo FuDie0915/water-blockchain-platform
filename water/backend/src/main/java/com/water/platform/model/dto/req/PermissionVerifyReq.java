@@ -4,10 +4,10 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * @author ：devon
@@ -24,7 +24,7 @@ public class PermissionVerifyReq {
     private Long id;
 
     @ApiModelProperty(value = "状态(1:通过并上链、2:不通过)")
-    @NotBlank(message = "状态")
+    @NotNull(message = "状态")
     @Min(1)
     @Max(2)
     private Integer status;

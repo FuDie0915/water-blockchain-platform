@@ -4,12 +4,13 @@ import com.water.platform.annotation.AuthCheck;
 import com.water.platform.base.common.BaseResponse;
 import com.water.platform.base.common.PageResponse;
 import com.water.platform.constant.UserRole;
-import com.water.platform.model.dto.resp.UserLoginResp;
-import com.water.platform.model.dto.resp.WaterStep1InfoResp;
+import com.water.platform.model.dto.resp.*;
+import com.water.platform.model.entity.WarningThreshold;
+import com.water.platform.service.WarningThresholdService;
+import com.water.platform.service.ExportService;
 import com.water.platform.service.WaterService;
-import com.water.platform.model.dto.resp.CompanyCertResp;
-import com.water.platform.model.dto.resp.WaterDataResp;
 import com.water.platform.model.dto.req.*;
+import com.water.platform.model.dto.resp.WaterDataResp;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -17,28 +18,30 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.util.List;
 
 /**
  * @author ：devon
  * @date ：2024/11/14 14:11
- * @description：水质业务接口
+ * @description：海水养殖场可信水质数据监管业务接口
  * @version: 1.0
  */
 @RestController
 @RequestMapping("/water")
 @Slf4j
-@Api(tags = "水质业务接口")
+@Api(tags = "海水养殖场可信水质数据监管业务接口")
 public class WaterApi {
 
     @Autowired
     private WaterService waterService;
 
-    @PostMapping("/user/login")
-    @ApiOperation("企业或监管局登录")
-    public BaseResponse<UserLoginResp> userLogin(@RequestBody @Validated UserLoginReq userLoginReq) {
-        return waterService.waterUserLogin(userLoginReq);
-    }
+    @Autowired
+    private ExportService exportService;
+
+    @Autowired
+    private WarningThresholdService warningThresholdService;
 
     @PostMapping("/step1Info")
     @ApiOperation("水质步骤1信息")
@@ -47,15 +50,15 @@ public class WaterApi {
     }
 
     @PostMapping("/permission/commit")
-    @ApiOperation("企业提交许可证")
-    @AuthCheck(roleType = UserRole.COMPANY)
+    @ApiOperation("养殖户提交许可证")
+    @AuthCheck(roleType = UserRole.FARMERS)
     public BaseResponse<Boolean> commit(@RequestBody @Validated PermissionCommitReq permissionCommitReq) {
         return waterService.commit(permissionCommitReq);
     }
 
     @GetMapping("/permission/company/query")
-    @ApiOperation("企业查询许可证")
-    @AuthCheck(roleType = UserRole.COMPANY)
+    @ApiOperation("养殖户查询许可证")
+    @AuthCheck(roleType = UserRole.FARMERS)
     public BaseResponse<List<CompanyCertResp>> query() {
         return waterService.companyQuery();
     }
@@ -65,6 +68,26 @@ public class WaterApi {
     @AuthCheck(roleType = UserRole.MANAGER)
     public BaseResponse<List<CompanyCertResp>> managerQuery() {
         return waterService.companyQuery();
+    }
+
+    @GetMapping("/permission/manager/allQuery")
+    @ApiOperation("监管局查询所有许可证")
+    @AuthCheck(roleType = UserRole.MANAGER)
+    public BaseResponse<List<CompanyCertResp>> managerAllQuery(@RequestParam(required = false) Integer status) {
+        return waterService.managerAllQuery(status);
+    }
+
+    @PostMapping("/permission/delete/{certId}")
+    @ApiOperation("养殖户删除许可证（仅被拒绝的）")
+    @AuthCheck(roleType = UserRole.FARMERS)
+    public BaseResponse<Boolean> deleteCert(@PathVariable("certId") Long certId) {
+        return waterService.deleteCert(certId);
+    }
+
+    @PostMapping("/data/delete/{dataId}")
+    @ApiOperation("删除水质数据（仅未上链的）")
+    public BaseResponse<Boolean> deleteWaterData(@PathVariable("dataId") Long dataId) {
+        return waterService.deleteWaterData(dataId);
     }
 
 
@@ -77,7 +100,7 @@ public class WaterApi {
 
     @PostMapping("/permission/isOnChain/{permissionId}")
     @ApiOperation("许可证链上比对")
-    public BaseResponse<CompanyCertResp> isOnChain(@PathVariable ("permissionId") Long permissionId) {
+    public BaseResponse<CompanyCertResp> isOnChain(@PathVariable("permissionId") Long permissionId) {
         return waterService.isOnChain(permissionId);
     }
 
@@ -93,6 +116,13 @@ public class WaterApi {
         return waterService.collect(waterDataCollectReq);
     }
 
+    @PostMapping("/data/manual")
+    @ApiOperation("养殖户手动上报水质数据（需监管局审核）")
+    @AuthCheck(roleType = UserRole.FARMERS)
+    public BaseResponse<Boolean> manual(@RequestBody @Validated WaterDataManualReq req) {
+        return waterService.manual(req);
+    }
+
     @GetMapping("/data/page")
     @ApiOperation("水数据分页查询")
     public PageResponse<WaterDataResp> page(@RequestParam Integer DataType, @RequestParam Long pageNum, @RequestParam Long pageSize) {
@@ -104,5 +134,62 @@ public class WaterApi {
     @AuthCheck(roleType = UserRole.MANAGER)
     public BaseResponse<Boolean> upChain(@RequestBody @Validated WaterDataUpChainReq waterDataUpChainReq) {
         return waterService.upChain(waterDataUpChainReq);
+    }
+
+    // ==================== 预警阈值配置 ====================
+
+    @PostMapping("/threshold/create")
+    @ApiOperation("监管局新建预警阈值配置（全部参数必填，只能创建一次）")
+    @AuthCheck(roleType = UserRole.MANAGER)
+    public BaseResponse<Boolean> createThreshold(@RequestBody @Validated WarningThresholdCreateReq req) {
+        return warningThresholdService.createThreshold(req);
+    }
+
+    @PostMapping("/threshold/update")
+    @ApiOperation("监管局修改预警阈值配置（只传需要修改的字段）")
+    @AuthCheck(roleType = UserRole.MANAGER)
+    public BaseResponse<Boolean> updateThreshold(@RequestBody @Validated WarningThresholdSaveReq req) {
+        return warningThresholdService.updateThreshold(req);
+    }
+
+    @GetMapping("/threshold/get")
+    @ApiOperation("监管局获取预警阈值配置")
+    @AuthCheck(roleType = UserRole.MANAGER)
+    public BaseResponse<WarningThreshold> getThreshold() {
+        return warningThresholdService.getThreshold();
+    }
+
+    @GetMapping("/data/manager/list")
+    @ApiOperation("监管局查看管辖养殖户的水质数据（手动上报的待审核数据）")
+    @AuthCheck(roleType = UserRole.MANAGER)
+    public BaseResponse<PageResponse<WaterDataResp>> managerDataList(
+            @RequestParam(required = false) Long farmerId,
+            @RequestParam(required = false) Integer auditStatus,
+            @RequestParam Long pageNum,
+            @RequestParam Long pageSize) {
+        return waterService.managerDataList(farmerId, auditStatus, pageNum, pageSize);
+    }
+
+    @PostMapping("/data/manager/audit")
+    @ApiOperation("监管局审核水质数据")
+    @AuthCheck(roleType = UserRole.MANAGER)
+    public BaseResponse<Boolean> auditWaterData(@RequestBody @Validated AuditReq req) {
+        return waterService.auditWaterData(req);
+    }
+
+    @PostMapping("/data/manager/batchAudit")
+    @ApiOperation("监管局批量审核水质数据")
+    @AuthCheck(roleType = UserRole.MANAGER)
+    public BaseResponse<Boolean> batchAuditWaterData(@RequestBody @Validated BatchAuditReq req) {
+        return waterService.batchAuditWaterData(req);
+    }
+
+    @GetMapping("/data/manager/export")
+    @ApiOperation("监管局导出水质数据Excel")
+    @AuthCheck(roleType = UserRole.MANAGER)
+    public void exportWaterData(HttpServletResponse response,
+                                @RequestParam(required = false) Long farmerId,
+                                @RequestParam(required = false) Integer dataType) throws Exception {
+        exportService.exportWaterData(response, farmerId, dataType);
     }
 }

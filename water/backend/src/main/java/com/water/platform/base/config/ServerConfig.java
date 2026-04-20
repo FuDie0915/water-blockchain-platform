@@ -1,10 +1,9 @@
 package com.water.platform.base.config;
 
-import jakarta.servlet.http.HttpServletRequest;
+import com.water.platform.utils.fileUtils.ServletUtils;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 服务相关配置
@@ -21,8 +20,7 @@ public class ServerConfig
      */
     public String getUrl()
     {
-        RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
-        HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
+        HttpServletRequest request = ServletUtils.getRequest();
         return getDomain(request);
     }
 

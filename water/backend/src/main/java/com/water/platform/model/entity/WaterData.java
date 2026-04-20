@@ -45,6 +45,9 @@ public class WaterData {
 
     private boolean isOnChain;
 
+    @ApiModelProperty(value = "审核状态(0=待审核,1=已通过,2=已拒绝)")
+    private Integer auditStatus;
+
     public boolean getIsOnChain() {
         return isOnChain;
     }

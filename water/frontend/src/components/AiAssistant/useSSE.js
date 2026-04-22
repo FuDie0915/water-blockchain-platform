@@ -85,13 +85,13 @@ function generateSessionId() {
 
 // ============================================
 // 工具函数：获取 Token
-// 计划书：优先级 satoken > companytoken > managertoken
+// 计划书：优先级 satoken > farmertoken > managertoken
 // ============================================
 function getToken() {
   // 按优先级获取 Token
   return (
     localStorage.getItem('satoken') ||
-    localStorage.getItem('companytoken') ||
+    localStorage.getItem('farmertoken') ||
     localStorage.getItem('managertoken') ||
     ''
   );
@@ -114,7 +114,7 @@ function buildSSEUrl(message, conversation) {
   params.append('message', message);
 
   // 计划书 3.3：通过 URL 参数传递 Token
-  // 优先级：satoken > companytoken > managertoken（与 src/utils/request.ts 保持一致）
+  // 优先级：satoken > farmertoken > managertoken（与 src/utils/request.ts 保持一致）
   const token = getToken();
   if (token) {
     params.append('satoken', token);

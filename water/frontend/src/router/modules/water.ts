@@ -22,13 +22,13 @@ export default [
         path: 'enterprise-login',
         name: 'enterprise-login',
         component: () => import('@/pages/water/workbench.vue'),
-        meta: { title: '养殖户工作台', roleCode: 'company', allowedRoles: ['company'] },
+        meta: { title: '养殖户工作台', roleCode: 'farmers', allowedRoles: ['farmers'] },
       },
       {
         path: 'breeding',
         name: 'farmer-breeding',
         component: FarmingProcess,
-        meta: { title: '养殖过程管理', roleCode: 'company', allowedRoles: ['company', 'manager'] },
+        meta: { title: '养殖过程管理', roleCode: 'farmers', allowedRoles: ['farmers', 'manager'] },
       },
       {
         path: 'monitor-login',

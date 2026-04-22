@@ -16,6 +16,20 @@
                 <t-button variant="outline" :loading="farmingProcessLoading" @click="openFarmingProcess">养殖过程管理</t-button>
               </template>
               <template v-else>
+                <!-- 监管局审核状态提示 -->
+                <t-tag v-if="managerAuditStatus === null" theme="warning" variant="light-outline" class="audit-status-tag">
+                  未提交审核
+                </t-tag>
+                <t-tag v-else-if="managerAuditStatus === 0" theme="primary" variant="light-outline" class="audit-status-tag">
+                  待审批
+                </t-tag>
+                <t-tag v-else-if="managerAuditStatus === 1" theme="success" variant="light-outline" class="audit-status-tag">
+                  已通过
+                </t-tag>
+                <t-tag v-else-if="managerAuditStatus === 2" theme="danger" variant="light-outline" class="audit-status-tag">
+                  已拒绝
+                </t-tag>
+                <t-button v-if="managerAuditStatus === null || managerAuditStatus === 2" theme="warning" variant="outline" @click="showManagerAuditDialog">提交资质审核</t-button>
                 <t-button :theme="currentView === 'dashboard' ? 'primary' : 'default'" :variant="currentView === 'dashboard' ? 'base' : 'outline'" @click="switchRegulatorView('dashboard')">监管总览</t-button>
                 <t-button :theme="currentView === 'approval' ? 'primary' : 'default'" :variant="currentView === 'approval' ? 'base' : 'outline'" @click="switchRegulatorView('approval')">许可审批</t-button>
                 <t-button :theme="currentView === 'waterData' ? 'primary' : 'default'" :variant="currentView === 'waterData' ? 'base' : 'outline'" @click="switchRegulatorView('waterData')">水数据审查</t-button>
@@ -731,6 +745,31 @@
         <div class="success-text">链上比对成功</div>
       </div>
     </t-dialog>
+
+    <!-- 监管局审核申请对话框 -->
+    <t-dialog
+      :visible.sync="managerAuditDialogVisible"
+      header="监管局资质审核申请"
+      width="500px"
+      :confirm-btn="{ content: '提交申请', theme: 'primary', loading: managerAuditSubmitting }"
+      @confirm="handleManagerAuditSubmit"
+      @cancel="resetManagerAuditForm"
+    >
+      <t-form :data="managerAuditForm" layout="vertical">
+        <t-form-item label="机构名称" required>
+          <t-input v-model="managerAuditForm.institutionName" placeholder="请输入机构名称，如：XX市水务监管局" />
+        </t-form-item>
+        <t-form-item label="管辖区域" required>
+          <t-input v-model="managerAuditForm.jurisdiction" placeholder="请输入管辖区域，如：XX市XX区" />
+        </t-form-item>
+        <t-form-item label="联系电话" required>
+          <t-input v-model="managerAuditForm.phone" placeholder="请输入联系电话" />
+        </t-form-item>
+        <t-form-item label="申请备注">
+          <t-textarea v-model="managerAuditForm.remark" :maxlength="200" placeholder="选填，可说明申请原因或补充信息" />
+        </t-form-item>
+      </t-form>
+    </t-dialog>
   </div>
 </template>
 
@@ -754,6 +793,7 @@ import { getSeedList, getFeedList, getMedicineList, getHarvestList } from '@/api
 import { getManagerSeedList, getManagerFeedList, getManagerMedicineList, getManagerHarvestList } from '@/api/water/farming-process.js';
 import { getBindStatus, getManagerBindList } from '@/api/water/bind.js';
 import { getFarmerDashboard, getManagerDashboard } from '@/api/water/dashboard.js';
+import { getManagerAuditStatus, submitManagerAudit } from '@/api/water/managerAudit.js';
 import { TooltipComponent, LegendComponent, GridComponent } from 'echarts/components';
 import { LineChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -997,6 +1037,17 @@ export default {
       farmerView: 'monitor',
       trendRange: '24h',
       manualEntryDialogVisible: false,
+      // 监管局审核申请相关
+      managerAuditStatus: null, // null=未查询, 0=待审核, 1=已通过, 2=已拒绝
+      managerAuditInfo: null,
+      managerAuditDialogVisible: false,
+      managerAuditSubmitting: false,
+      managerAuditForm: {
+        institutionName: '',
+        jurisdiction: '',
+        phone: '',
+        remark: '',
+      },
       waterTrendChart: null,
       regulatorRegionChart: null,
       chartRefreshTimer: null,
@@ -1400,7 +1451,7 @@ export default {
       return localStorage.getItem('platformUserAccount') || this.$store.state.user?.userInfo?.userAccount || '--';
     },
     currentRoleToken() {
-      return this.userType === 'monitor' ? localStorage.getItem('managertoken') : localStorage.getItem('companytoken');
+      return this.userType === 'monitor' ? localStorage.getItem('managertoken') : localStorage.getItem('farmertoken');
     },
     currentChainAddress() {
       return this.userType === 'monitor' ? this.monitorBlockchainAddress : this.enterpriseBlockchainAddress;
@@ -1802,6 +1853,11 @@ export default {
       this.currentUser = userType === 'enterprise' ? '养殖户用户' : '监管局用户';
       this.currentView = userType === 'monitor' ? 'dashboard' : 'approval';
 
+      // 监管局登录时检查审核状态
+      if (userType === 'monitor') {
+        await this.checkManagerAuditStatus();
+      }
+
       // 加载基础数据
       await Promise.all([
         this.fetchPermissionList(),
@@ -1827,6 +1883,69 @@ export default {
           this.queueRenderRegulatorChart();
         });
       }
+    },
+    async checkManagerAuditStatus() {
+      try {
+        const res = await getManagerAuditStatus();
+        if (res.code === 0 && res.data) {
+          this.managerAuditInfo = res.data;
+          this.managerAuditStatus = res.data.status;
+          // 如果审核被拒绝，允许重新提交
+          if (this.managerAuditStatus === 2) {
+            this.$message.warning('您的监管局资质审核未通过，请重新提交申请');
+          }
+        } else {
+          // 未提交审核申请
+          this.managerAuditStatus = null;
+          this.managerAuditInfo = null;
+        }
+      } catch (error) {
+        console.error('获取审核状态失败:', error);
+        this.managerAuditStatus = null;
+      }
+    },
+    showManagerAuditDialog() {
+      this.managerAuditDialogVisible = true;
+      if (this.managerAuditInfo) {
+        // 如果有之前的申请信息，填充表单
+        this.managerAuditForm = {
+          institutionName: this.managerAuditInfo.institutionName || '',
+          jurisdiction: this.managerAuditInfo.jurisdiction || '',
+          phone: this.managerAuditInfo.phone || '',
+          remark: this.managerAuditInfo.remark || '',
+        };
+      }
+    },
+    async handleManagerAuditSubmit() {
+      const { institutionName, jurisdiction, phone } = this.managerAuditForm;
+      if (!institutionName || !jurisdiction || !phone) {
+        this.$message.warning('请填写完整的申请信息');
+        return;
+      }
+      this.managerAuditSubmitting = true;
+      try {
+        const res = await submitManagerAudit(this.managerAuditForm);
+        if (res.code === 0) {
+          this.$message.success('审核申请已提交，请等待管理员审批');
+          this.managerAuditDialogVisible = false;
+          await this.checkManagerAuditStatus();
+        } else {
+          this.$message.error(res.message || '提交失败');
+        }
+      } catch (error) {
+        console.error('提交审核申请失败:', error);
+        this.$message.error('提交失败，请稍后重试');
+      } finally {
+        this.managerAuditSubmitting = false;
+      }
+    },
+    resetManagerAuditForm() {
+      this.managerAuditForm = {
+        institutionName: '',
+        jurisdiction: '',
+        phone: '',
+        remark: '',
+      };
     },
     async loginByCurrentSession(userType) {
       let userAccount = localStorage.getItem('platformUserAccount');
@@ -1860,7 +1979,7 @@ export default {
           });
           if (response.code === 0) {
             if (userType === 'enterprise') {
-              localStorage.setItem('companytoken', response.data.token);
+              localStorage.setItem('farmertoken', response.data.token);
             } else {
               localStorage.setItem('managertoken', response.data.token);
             }
@@ -1886,7 +2005,7 @@ export default {
       }
 
       const userType = routeName === 'enterprise-login' ? 'enterprise' : 'monitor';
-      const roleTokenKey = userType === 'enterprise' ? 'companytoken' : 'managertoken';
+      const roleTokenKey = userType === 'enterprise' ? 'farmertoken' : 'managertoken';
 
       if (!localStorage.getItem('satoken')) {
         this.$message.error('请先登录平台账号');
@@ -1910,7 +2029,7 @@ export default {
         return;
       }
 
-      if (currentRole === 'company' && userType !== 'enterprise') {
+      if (currentRole === 'farmers' && userType !== 'enterprise') {
         this.$message.warning('当前为养殖户登录态，已返回养殖户控制台');
         this.$router.replace('/water/enterprise-login');
         return;
@@ -2664,7 +2783,7 @@ export default {
       const platformAccount = localStorage.getItem('platformUserAccount') || '';
       const platformPassword = localStorage.getItem('platformUserPassword') || '123456';
 
-      this.enterpriseAccount = this.enterpriseAccount || (platformRole === 'company' ? (platformAccount || 'farmer_demo') : 'farmer_demo');
+      this.enterpriseAccount = this.enterpriseAccount || (platformRole === 'farmers' ? (platformAccount || 'farmer_demo') : 'farmer_demo');
       this.enterprisePassword = this.enterprisePassword || platformPassword;
       this.enterpriseBlockchainAddress = this.enterpriseBlockchainAddress || '0xFARMER-DEMO-001';
 
@@ -2746,8 +2865,17 @@ export default {
     async fetchPondList() {
       try {
         const res = this.userType === 'monitor' ? await getManagerPondList() : await getPondList();
-        if (res.code === 200 && res.data) {
-          const list = Array.isArray(res.data) ? res.data : res.data.records || [];
+        if (res.code === 0 && res.data) {
+          // 养殖户接口返回 List<Pond>，监管局接口返回 PageResponse<Pond>
+          let list;
+          if (this.userType === 'monitor') {
+            // 监管局：PageResponse，data 字段包含列表
+            const pageData = res.data;
+            list = Array.isArray(pageData.data) ? pageData.data : (Array.isArray(pageData) ? pageData : []);
+          } else {
+            // 养殖户：直接返回列表
+            list = Array.isArray(res.data) ? res.data : [];
+          }
           if (list.length > 0) {
             this.pondOptions = list.map(item => ({
               value: String(item.id),
@@ -2768,7 +2896,7 @@ export default {
     async fetchDashboardData() {
       try {
         const res = this.userType === 'monitor' ? await getManagerDashboard() : await getFarmerDashboard();
-        if (res.code === 200 && res.data) {
+        if (res.code === 0 && res.data) {
           const data = res.data;
           // 更新看板统计数据
           if (this.userType === 'monitor') {
@@ -2872,93 +3000,96 @@ export default {
         // 构建存证时间线
         const timeline = [];
 
-        if (seedRes.code === 200 && seedRes.data) {
-          const list = Array.isArray(seedRes.data) ? seedRes.data : seedRes.data.records || [];
-          list.forEach(item => {
-            timeline.push({
-              id: `seed-${item.id}`,
-              pondId: String(item.pondId || ''),
-              pondName: item.pondName || '',
-              title: `苗种投放: ${item.category || ''}`,
-              time: item.date || item.createTime || '',
-              evidenceNo: `BC-SEED-${item.id}`,
-              onChain: item.status === 'APPROVED',
-              ownerName: item.farmerName || '',
-              contentTitle: '苗种投放记录',
-              chainTime: item.chainTime || item.updateTime || '',
-              hash: item.txHash || '',
-              blockHeight: item.blockNumber || '--',
-              description: `投放${item.quantity || ''}，来源${item.source || ''}`,
-              verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
-            });
-          });
-        }
+        // 解析列表数据的辅助函数
+        const parseListData = (res, isMonitor) => {
+          if (!res || res.code !== 0 || !res.data) return [];
+          // 养殖户接口直接返回 PageResponse，监管局接口返回 BaseResponse<PageResponse>
+          const pageData = isMonitor ? res.data : res;
+          if (Array.isArray(pageData.data)) {
+            return pageData.data;
+          }
+          return Array.isArray(pageData) ? pageData : [];
+        };
 
-        if (feedRes.code === 200 && feedRes.data) {
-          const list = Array.isArray(feedRes.data) ? feedRes.data : feedRes.data.records || [];
-          list.forEach(item => {
-            timeline.push({
-              id: `feed-${item.id}`,
-              pondId: String(item.pondId || ''),
-              pondName: item.pondName || '',
-              title: `投喂记录: ${item.brand || ''}`,
-              time: `${item.date || ''} ${item.time || ''}`,
-              evidenceNo: `BC-FEED-${item.id}`,
-              onChain: item.status === 'APPROVED',
-              ownerName: item.farmerName || '',
-              contentTitle: '投喂记录',
-              chainTime: item.chainTime || item.updateTime || '',
-              hash: item.txHash || '',
-              blockHeight: item.blockNumber || '--',
-              description: `投喂${item.amount || ''}`,
-              verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
-            });
+        const seedList = parseListData(seedRes, this.userType === 'monitor');
+        seedList.forEach(item => {
+          timeline.push({
+            id: `seed-${item.id}`,
+            pondId: String(item.pondId || ''),
+            pondName: item.pondName || '',
+            title: `苗种投放: ${item.category || ''}`,
+            time: item.date || item.createTime || '',
+            evidenceNo: `BC-SEED-${item.id}`,
+            onChain: item.status === 'APPROVED',
+            ownerName: item.farmerName || '',
+            contentTitle: '苗种投放记录',
+            chainTime: item.chainTime || item.updateTime || '',
+            hash: item.txHash || '',
+            blockHeight: item.blockNumber || '--',
+            description: `投放${item.quantity || ''}，来源${item.source || ''}`,
+            verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
           });
-        }
+        });
 
-        if (medicineRes.code === 200 && medicineRes.data) {
-          const list = Array.isArray(medicineRes.data) ? medicineRes.data : medicineRes.data.records || [];
-          list.forEach(item => {
-            timeline.push({
-              id: `medicine-${item.id}`,
-              pondId: String(item.pondId || ''),
-              pondName: item.pondName || '',
-              title: `用药记录: ${item.name || ''}`,
-              time: `${item.date || ''} ${item.time || ''}`,
-              evidenceNo: `BC-MED-${item.id}`,
-              onChain: item.status === 'APPROVED',
-              ownerName: item.farmerName || '',
-              contentTitle: '用药记录',
-              chainTime: item.chainTime || item.updateTime || '',
-              hash: item.txHash || '',
-              blockHeight: item.blockNumber || '--',
-              description: `${item.name || ''} ${item.dosage || ''}`,
-              verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
-            });
+        const feedList = parseListData(feedRes, this.userType === 'monitor');
+        feedList.forEach(item => {
+          timeline.push({
+            id: `feed-${item.id}`,
+            pondId: String(item.pondId || ''),
+            pondName: item.pondName || '',
+            title: `投喂记录: ${item.brand || ''}`,
+            time: `${item.date || ''} ${item.time || ''}`,
+            evidenceNo: `BC-FEED-${item.id}`,
+            onChain: item.status === 'APPROVED',
+            ownerName: item.farmerName || '',
+            contentTitle: '投喂记录',
+            chainTime: item.chainTime || item.updateTime || '',
+            hash: item.txHash || '',
+            blockHeight: item.blockNumber || '--',
+            description: `投喂${item.amount || ''}`,
+            verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
           });
-        }
+        });
 
-        if (harvestRes.code === 200 && harvestRes.data) {
-          const list = Array.isArray(harvestRes.data) ? harvestRes.data : harvestRes.data.records || [];
-          list.forEach(item => {
-            timeline.push({
-              id: `harvest-${item.id}`,
-              pondId: String(item.pondId || ''),
-              pondName: item.pondName || '',
-              title: `收获记录: ${item.batchNo || ''}`,
-              time: `${item.date || ''} ${item.time || ''}`,
-              evidenceNo: `BC-HARVEST-${item.id}`,
-              onChain: item.status === 'APPROVED',
-              ownerName: item.farmerName || '',
-              contentTitle: '收获记录',
-              chainTime: item.chainTime || item.updateTime || '',
-              hash: item.txHash || '',
-              blockHeight: item.blockNumber || '--',
-              description: `收获${item.weight || ''}，去向${item.destination || ''}`,
-              verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
-            });
+        const medicineList = parseListData(medicineRes, this.userType === 'monitor');
+        medicineList.forEach(item => {
+          timeline.push({
+            id: `medicine-${item.id}`,
+            pondId: String(item.pondId || ''),
+            pondName: item.pondName || '',
+            title: `用药记录: ${item.name || ''}`,
+            time: `${item.date || ''} ${item.time || ''}`,
+            evidenceNo: `BC-MED-${item.id}`,
+            onChain: item.status === 'APPROVED',
+            ownerName: item.farmerName || '',
+            contentTitle: '用药记录',
+            chainTime: item.chainTime || item.updateTime || '',
+            hash: item.txHash || '',
+            blockHeight: item.blockNumber || '--',
+            description: `${item.name || ''} ${item.dosage || ''}`,
+            verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
           });
-        }
+        });
+
+        const harvestList = parseListData(harvestRes, this.userType === 'monitor');
+        harvestList.forEach(item => {
+          timeline.push({
+            id: `harvest-${item.id}`,
+            pondId: String(item.pondId || ''),
+            pondName: item.pondName || '',
+            title: `收获记录: ${item.batchNo || ''}`,
+            time: `${item.date || ''} ${item.time || ''}`,
+            evidenceNo: `BC-HARVEST-${item.id}`,
+            onChain: item.status === 'APPROVED',
+            ownerName: item.farmerName || '',
+            contentTitle: '收获记录',
+            chainTime: item.chainTime || item.updateTime || '',
+            hash: item.txHash || '',
+            blockHeight: item.blockNumber || '--',
+            description: `收获${item.weight || ''}，去向${item.destination || ''}`,
+            verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
+          });
+        });
 
         // 按时间排序
         timeline.sort((a, b) => String(b.time).localeCompare(String(a.time)));

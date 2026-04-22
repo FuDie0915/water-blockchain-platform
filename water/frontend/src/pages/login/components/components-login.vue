@@ -55,13 +55,13 @@ const FORM_RULES = {
 
 const ROLE_TEXT_MAP = {
   admin: '管理员端',
-  company: '养殖户端',
+  farmers: '养殖户端',
   manager: '监管端',
 };
 
 const ROLE_ROUTE_MAP = {
   admin: '/dashboard/base',
-  company: '/water/enterprise-login',
+  farmers: '/water/enterprise-login',
   manager: '/water/monitor-login',
 };
 
@@ -76,7 +76,7 @@ export default Vue.extend({
   props: {
     role: {
       type: String,
-      default: 'company',
+      default: 'farmers',
     },
   },
   data() {

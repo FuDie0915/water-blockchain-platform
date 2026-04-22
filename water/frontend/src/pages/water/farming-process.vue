@@ -363,7 +363,7 @@ export default {
   },
   computed: {
     currentRoleCode() {
-      const roleValue = this.$store?.getters?.['user/roles'] || localStorage.getItem('platformUserRole') || 'company';
+      const roleValue = this.$store?.getters?.['user/roles'] || localStorage.getItem('platformUserRole') || 'farmers';
       return Array.isArray(roleValue) ? roleValue[0] : roleValue;
     },
     isMonitorView() {
@@ -602,8 +602,18 @@ export default {
       this.loadingPonds = true;
       try {
         const res = this.isMonitorView ? await getManagerPondList() : await getPondList();
-        if (res.code === 200 && res.data) {
-          this.pondOptions = (Array.isArray(res.data) ? res.data : res.data.records || []).map(item => ({
+        if (res.code === 0 && res.data) {
+          // 养殖户接口返回 List<Pond>，监管局接口返回 PageResponse<Pond>
+          let list;
+          if (this.isMonitorView) {
+            // 监管局：PageResponse，data 字段包含列表
+            const pageData = res.data;
+            list = Array.isArray(pageData.data) ? pageData.data : (Array.isArray(pageData) ? pageData : []);
+          } else {
+            // 养殖户：直接返回列表
+            list = Array.isArray(res.data) ? res.data : [];
+          }
+          this.pondOptions = list.map(item => ({
             value: String(item.id),
             label: item.pondName || item.name || `养殖池${item.id}`,
             species: item.species || item.fishType || '',
@@ -676,21 +686,34 @@ export default {
       }
     },
     parseListResponse(res) {
-      if (res.code === 200 && res.data) {
-        const list = Array.isArray(res.data) ? res.data : res.data.records || [];
-        return list.map(item => ({
-          ...item,
-          id: item.id,
-          pondId: String(item.pondId || ''),
-          pondName: item.pondName || '',
-          farmerId: item.farmerId ? String(item.farmerId) : null,
-          farmerName: item.farmerName || item.userName || '',
-          farmName: item.farmName || '',
-          date: item.date || item.createTime?.split(' ')[0] || '',
-          time: item.time || item.createTime?.split(' ')[1]?.substring(0, 5) || '',
-        }));
+      if (!res) return [];
+
+      // 处理两种返回格式：
+      // 1. 养殖户接口直接返回 PageResponse（res.code === 0 且 res.data 是数组）
+      // 2. 监管局接口返回 BaseResponse<PageResponse>（res.code === 0 且 res.data.data 是数组）
+      let list = [];
+
+      if (res.code === 0) {
+        if (Array.isArray(res.data)) {
+          // 养殖户接口：res 是 PageResponse，res.data 是数组
+          list = res.data;
+        } else if (res.data && Array.isArray(res.data.data)) {
+          // 监管局接口：res 是 BaseResponse，res.data 是 PageResponse，res.data.data 是数组
+          list = res.data.data;
+        }
       }
-      return [];
+
+      return list.map(item => ({
+        ...item,
+        id: item.id,
+        pondId: String(item.pondId || ''),
+        pondName: item.pondName || '',
+        farmerId: item.farmerId ? String(item.farmerId) : null,
+        farmerName: item.farmerName || item.userName || '',
+        farmName: item.farmName || '',
+        date: item.date || item.createTime?.split(' ')[0] || '',
+        time: item.time || item.createTime?.split(' ')[1]?.substring(0, 5) || '',
+      }));
     },
     filterRecordsByCurrentScope(records) {
       let result = Array.isArray(records) ? [...records] : [];
@@ -798,7 +821,7 @@ export default {
           });
         }
 
-        if (res.code === 200) {
+        if (res.code === 0) {
           this.$message.success(`${this.currentTabLabel}记录已创建`);
           this.dialogVisible = false;
           this.resetForm();

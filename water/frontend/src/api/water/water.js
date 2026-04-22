@@ -1,5 +1,19 @@
 import request from '@/utils/request'  // 确保已配置axios请求实例
 
+// 工作台登录（用于角色切换）
+export function Login(data) {
+  const loginType = data.loginType ?? 0;
+  const url = loginType === 0 ? '/gk_api/user/login/farmers' : '/gk_api/user/login/manager';
+  return request({
+    url,
+    method: 'post',
+    data: {
+      userAccount: data.userAccount,
+      userPassword: data.userPassword,
+    },
+  });
+}
+
 // 水数据生成
 export function collectWaterGen(data) {
   return request({
@@ -32,13 +46,15 @@ export function waterInfoQuery(data) {
   })
 }
 
-// 水数据上链
+// 水数据上链（支持单个id或多个id）
 export function upChain(data) {
+  // 后端期望 List<Long> id，需要包装为数组
+  const ids = Array.isArray(data) ? data : [data];
   return request({
     url: '/gk_api/water/data/upChain',
     method: 'post',
     data: {
-      id: data,
+      id: ids,
     }
   })
 }

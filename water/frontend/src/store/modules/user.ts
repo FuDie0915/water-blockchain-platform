@@ -37,7 +37,7 @@ const mutations = {
     localStorage.removeItem('platformUserAccount');
     localStorage.removeItem('platformUserPassword');
     localStorage.removeItem('platformUserRole');
-    localStorage.removeItem('companytoken');
+    localStorage.removeItem('farmertoken');
     localStorage.removeItem('managertoken');
     state.token = '';
   },
@@ -74,7 +74,7 @@ const actions = {
         },
       };
 
-      localStorage.removeItem('companytoken');
+      localStorage.removeItem('farmertoken');
       localStorage.removeItem('managertoken');
 
       commit('setToken', normalizedData.token);
@@ -84,8 +84,8 @@ const actions = {
       localStorage.setItem('platformUserPassword', userInfo.userPassword || '');
       localStorage.setItem('platformUserRole', role);
 
-      if (role === 'company') {
-        localStorage.setItem('companytoken', normalizedData.token);
+      if (role === 'farmers') {
+        localStorage.setItem('farmertoken', normalizedData.token);
       } else if (role === 'manager') {
         localStorage.setItem('managertoken', normalizedData.token);
       }
@@ -122,13 +122,13 @@ const actions = {
   },
   async logout({ commit, state }) {
     const token = state.token || localStorage.getItem(TOKEN_NAME);
-    const companyToken = localStorage.getItem('companytoken');
+    const farmerToken = localStorage.getItem('farmertoken');
     const managerToken = localStorage.getItem('managertoken');
 
     commit('removeToken');
     commit('setUserInfo', InitUserInfo);
 
-    const logoutTasks = [token, companyToken, managerToken]
+    const logoutTasks = [token, farmerToken, managerToken]
       .filter(Boolean)
       .map((item) => requestLogout(item).catch(() => null));
 

@@ -78,7 +78,7 @@
               <div class="account-split-panel">
                 <div class="account-split-panel__title">养殖户管理</div>
                 <t-table
-                  row-key="id"
+                  row-key="userId"
                   :data="farmerAccounts"
                   :columns="accountColumns"
                   bordered
@@ -91,7 +91,7 @@
               <div class="account-split-panel">
                 <div class="account-split-panel__title">监管端管理</div>
                 <t-table
-                  row-key="id"
+                  row-key="userId"
                   :data="managerAccounts"
                   :columns="accountColumns"
                   bordered
@@ -123,6 +123,23 @@
               </div>
               <div v-if="thresholdRules.length === 0" class="empty-tip">暂无阈值配置</div>
             </div>
+          </t-card>
+        </t-col>
+      </t-row>
+
+      <t-row :gutter="[16, 16]" class="content-row">
+        <t-col :xs="12" :lg="12">
+          <t-card title="监管局资质审核" :bordered="false" class="panel-card table-card">
+            <div class="section-tip">审核监管局用户提交的资质认证申请，通过后监管局用户可正常使用系统功能。</div>
+            <t-table
+              row-key="id"
+              :data="managerAuditList"
+              :columns="managerAuditColumns"
+              :hover="true"
+              table-layout="auto"
+              :loading="loadingManagerAudit"
+              :empty="'暂无待审核申请'"
+            />
           </t-card>
         </t-col>
       </t-row>
@@ -293,6 +310,7 @@ import { getAdminUserList, adminCreateUser, updateUserStatus } from '@/api/water
 import { getAdminAnnouncementList, adminPublishAnnouncement } from '@/api/water/announcement';
 import { getAdminDashboard } from '@/api/water/dashboard';
 import { getThreshold, createThreshold } from '@/api/water/water';
+import { getAdminManagerAuditList, adminApproveManagerAudit, adminRejectManagerAudit } from '@/api/water/managerAudit';
 
 export default {
   name: 'DashboardBase',
@@ -318,6 +336,48 @@ export default {
       userList: [],
       announcements: [],
       thresholdData: null,
+      // 监管局审核相关
+      managerAuditList: [],
+      loadingManagerAudit: false,
+      managerAuditColumns: [
+        { colKey: 'id', title: '申请ID', width: 80 },
+        { colKey: 'institutionName', title: '机构名称', minWidth: 160 },
+        { colKey: 'jurisdiction', title: '管辖区域', width: 140 },
+        { colKey: 'phone', title: '联系电话', width: 120 },
+        { colKey: 'createTime', title: '申请时间', width: 160 },
+        {
+          colKey: 'status',
+          title: '审核状态',
+          width: 100,
+          cell: (h, { row }) => {
+            const statusMap = {
+              0: { theme: 'warning', text: '待审核' },
+              1: { theme: 'success', text: '已通过' },
+              2: { theme: 'danger', text: '已拒绝' },
+            };
+            const status = statusMap[row.status] || { theme: 'default', text: '未知' };
+            return h('t-tag', { props: { theme: status.theme, variant: 'light' } }, status.text);
+          },
+        },
+        {
+          colKey: 'operation',
+          title: '操作',
+          width: 180,
+          cell: (h, { row }) => {
+            if (row.status !== 0) return h('span', { style: { color: '#6a7f95' } }, '--');
+            return h('div', { style: { display: 'flex', gap: '8px' } }, [
+              h('t-button', {
+                props: { theme: 'success', variant: 'text', size: 'small' },
+                on: { click: () => this.handleApproveManagerAudit(row) },
+              }, '通过'),
+              h('t-button', {
+                props: { theme: 'danger', variant: 'text', size: 'small' },
+                on: { click: () => this.handleRejectManagerAudit(row) },
+              }, '拒绝'),
+            ]);
+          },
+        },
+      ],
       columns: [
         { colKey: 'nodeId', title: '节点 ID', ellipsis: true },
         { colKey: 'blockNumber', title: '块高', width: 120 },
@@ -333,7 +393,7 @@ export default {
           title: '角色类型',
           width: 100,
           cell: (h, { row }) => h('t-tag', {
-            props: { theme: row.userRole === 'MANAGER' ? 'primary' : 'success', variant: 'light' }
+            props: { theme: row.userRole === 'manager' ? 'primary' : 'success', variant: 'light' }
           }, this.formatRole(row.userRole)),
         },
         {
@@ -359,24 +419,24 @@ export default {
         },
       ],
       noticeAudienceOptions: [
-        { label: '全部养殖户', value: 'FARMERS' },
-        { label: '全部监管端', value: 'MANAGER' },
-        { label: '全平台', value: 'ALL' },
+        { label: '全部养殖户', value: 'farmers' },
+        { label: '全部监管端', value: 'manager' },
+        { label: '全平台', value: 'all' },
       ],
       roleOptions: [
-        { label: '养殖户', value: 'FARMERS' },
-        { label: '监管端', value: 'MANAGER' },
-        { label: '管理员', value: 'ADMIN' },
+        { label: '养殖户', value: 'farmers' },
+        { label: '监管端', value: 'manager' },
+        { label: '管理员', value: 'admin' },
       ],
       noticeForm: {
         title: '',
-        targetRole: 'FARMERS',
+        targetRole: 'farmers',
         content: '',
       },
       createUserForm: {
         userAccount: '',
         userName: '',
-        userRole: 'FARMERS',
+        userRole: 'farmers',
         phone: '',
         userPassword: '123456',
       },
@@ -404,16 +464,19 @@ export default {
   },
   computed: {
     farmerAccounts() {
-      return this.userList.filter((item) => item.userRole === 'FARMERS');
+      return this.userList.filter((item) => item.userRole === 'farmers');
     },
     managerAccounts() {
-      return this.userList.filter((item) => item.userRole === 'MANAGER');
+      return this.userList.filter((item) => item.userRole === 'manager');
+    },
+    pendingManagerAuditCount() {
+      return this.managerAuditList.filter((item) => item.status === 0).length;
     },
     stats() {
       return [
         { title: '养殖户账号', value: this.farmerAccounts.length, description: '当前已开通并纳入平台管理的养殖主体' },
         { title: '监管账号', value: this.managerAccounts.length, description: '可执行审批、复核与抽检的监管账户' },
-        { title: '启用账号数', value: this.userList.filter((item) => item.userStatus === 1).length, description: '目前处于正常使用状态的系统账户' },
+        { title: '待审核监管局', value: this.pendingManagerAuditCount, description: '待审批的监管局资质申请数量' },
         { title: '公告已发布', value: this.announcements.length, description: '最近面向养殖户或监管端的通知条数' },
       ];
     },
@@ -474,13 +537,14 @@ export default {
         this.fetchAnnouncements(),
         this.fetchDashboard(),
         this.fetchThreshold(),
+        this.fetchManagerAuditList(),
       ]);
       this.loading = false;
     },
     async fetchBoard() {
       try {
         const response = await getBlockchainBoard();
-        if (response?.code === 200 && response.data) {
+        if (response?.code === 0 && response.data) {
           this.boardData = {
             ...this.boardData,
             ...response.data,
@@ -520,8 +584,10 @@ export default {
       this.loadingUsers = true;
       try {
         const res = await getAdminUserList();
-        if (res.code === 200 && res.data) {
-          this.userList = Array.isArray(res.data) ? res.data : res.data.records || [];
+        if (res.code === 0 && res.data) {
+          // 后端返回 PageResponse，data 字段包含用户列表
+          const pageData = res.data;
+          this.userList = Array.isArray(pageData.data) ? pageData.data : pageData.records || [];
         }
       } catch (error) {
         console.error('加载用户列表失败:', error);
@@ -533,8 +599,9 @@ export default {
       this.loadingAnnouncements = true;
       try {
         const res = await getAdminAnnouncementList();
-        if (res.code === 200 && res.data) {
-          this.announcements = Array.isArray(res.data) ? res.data : res.data.records || [];
+        if (res.code === 0 && res.data) {
+          // 公告接口返回 List<Announcement>，直接使用
+          this.announcements = Array.isArray(res.data) ? res.data : [];
         }
       } catch (error) {
         console.error('加载公告列表失败:', error);
@@ -545,7 +612,7 @@ export default {
     async fetchDashboard() {
       try {
         const res = await getAdminDashboard();
-        if (res.code === 200 && res.data) {
+        if (res.code === 0 && res.data) {
           this.dashboardData = res.data;
         }
       } catch (error) {
@@ -556,7 +623,7 @@ export default {
       this.loadingThreshold = true;
       try {
         const res = await getThreshold();
-        if (res.code === 200 && res.data) {
+        if (res.code === 0 && res.data) {
           this.thresholdData = res.data;
         }
       } catch (error) {
@@ -570,18 +637,18 @@ export default {
       return new Date(value).toLocaleString();
     },
     formatRole(role) {
-      const map = { FARMERS: '养殖户', MANAGER: '监管端', ADMIN: '管理员' };
+      const map = { farmers: '养殖户', manager: '监管端', admin: '管理员' };
       return map[role] || role;
     },
     formatTargetRole(role) {
-      const map = { FARMERS: '全部养殖户', MANAGER: '全部监管端', ALL: '全平台' };
+      const map = { farmers: '全部养殖户', manager: '全部监管端', all: '全平台' };
       return map[role] || role;
     },
     async toggleAccountStatus(row) {
       try {
         const newStatus = row.userStatus === 1 ? 0 : 1;
-        const res = await updateUserStatus({ id: row.id, status: newStatus });
-        if (res.code === 200) {
+        const res = await updateUserStatus({ userId: row.userId, userStatus: newStatus });
+        if (res.code === 0) {
           row.userStatus = newStatus;
           this.$message.success(`${row.userName} 账号状态已切换为${newStatus === 1 ? '启用' : '停用'}`);
         } else {
@@ -599,7 +666,7 @@ export default {
       this.createUserForm = {
         userAccount: '',
         userName: '',
-        userRole: 'FARMERS',
+        userRole: 'farmers',
         phone: '',
         userPassword: '123456',
       };
@@ -613,7 +680,7 @@ export default {
       this.creatingUser = true;
       try {
         const res = await adminCreateUser(this.createUserForm);
-        if (res.code === 200) {
+        if (res.code === 0) {
           this.$message.success('用户创建成功');
           this.createUserDialogVisible = false;
           this.resetCreateUserForm();
@@ -645,7 +712,7 @@ export default {
       this.savingThreshold = true;
       try {
         const res = await createThreshold(this.thresholdForm);
-        if (res.code === 200) {
+        if (res.code === 0) {
           this.$message.success('阈值配置保存成功');
           this.thresholdDialogVisible = false;
           this.fetchThreshold();
@@ -667,7 +734,7 @@ export default {
       this.publishing = true;
       try {
         const res = await adminPublishAnnouncement(this.noticeForm);
-        if (res.code === 200) {
+        if (res.code === 0) {
           this.$message.success('公告发布成功');
           this.resetNoticeForm();
           this.fetchAnnouncements();
@@ -684,9 +751,52 @@ export default {
     resetNoticeForm() {
       this.noticeForm = {
         title: '',
-        targetRole: 'FARMERS',
+        targetRole: 'farmers',
         content: '',
       };
+    },
+    async fetchManagerAuditList() {
+      this.loadingManagerAudit = true;
+      try {
+        const res = await getAdminManagerAuditList({ pageNum: 1, pageSize: 100 });
+        if (res.code === 0 && res.data) {
+          // 返回 PageResponse，data 字段包含列表
+          const pageData = res.data;
+          this.managerAuditList = Array.isArray(pageData.data) ? pageData.data : (Array.isArray(pageData) ? pageData : []);
+        }
+      } catch (error) {
+        console.error('获取监管局审核列表失败:', error);
+      } finally {
+        this.loadingManagerAudit = false;
+      }
+    },
+    async handleApproveManagerAudit(row) {
+      try {
+        const res = await adminApproveManagerAudit({ id: row.id, auditRemark: '审核通过' });
+        if (res.code === 0) {
+          this.$message.success(`已通过 ${row.institutionName} 的审核申请`);
+          this.fetchManagerAuditList();
+        } else {
+          this.$message.error(res.message || '操作失败');
+        }
+      } catch (error) {
+        console.error('审批失败:', error);
+        this.$message.error('审批失败');
+      }
+    },
+    async handleRejectManagerAudit(row) {
+      try {
+        const res = await adminRejectManagerAudit({ id: row.id, auditRemark: '审核未通过' });
+        if (res.code === 0) {
+          this.$message.warning(`已拒绝 ${row.institutionName} 的审核申请`);
+          this.fetchManagerAuditList();
+        } else {
+          this.$message.error(res.message || '操作失败');
+        }
+      } catch (error) {
+        console.error('审批失败:', error);
+        this.$message.error('审批失败');
+      }
     },
   },
 };

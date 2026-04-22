@@ -310,9 +310,16 @@ public class UserService {
             newUser.setUserName(req.getUserName());
             newUser.setUserRole(role);
             newUser.setUserStatus(1);
-            CryptoKeyPair keyPair = client.getCryptoSuite().createKeyPair();
-            newUser.setAccountAddress(keyPair.getAddress());
-            newUser.setPrivateKey(keyPair.getHexPrivateKey());
+            // 如果区块链客户端可用，生成区块链账户地址
+            if (client != null) {
+                try {
+                    CryptoKeyPair keyPair = client.getCryptoSuite().createKeyPair();
+                    newUser.setAccountAddress(keyPair.getAddress());
+                    newUser.setPrivateKey(keyPair.getHexPrivateKey());
+                } catch (Exception e) {
+                    // 区块链客户端异常时跳过地址生成
+                }
+            }
             newUser.setExtInfo(req.getExtInfo());
             userMapper.insert(newUser);
 

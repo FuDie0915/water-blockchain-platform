@@ -958,8 +958,8 @@ export default {
     // },
     logout() {
       if (this.currentLoginType === 'enterprise') {
-        Logout(localStorage.getItem('companytoken'))
-        localStorage.removeItem('companytoken')
+        Logout(localStorage.getItem('farmertoken'))
+        localStorage.removeItem('farmertoken')
       } else {
         Logout(localStorage.getItem('managertoken'))
         localStorage.removeItem('managertoken')
@@ -1014,7 +1014,7 @@ export default {
         const response = await Login(loginData)
         if (response.code === 0) {
           if (userType === 'enterprise') {
-            localStorage.setItem('companytoken', response.data.token)
+            localStorage.setItem('farmertoken', response.data.token)
           } else {
             localStorage.setItem('managertoken', response.data.token)
           }

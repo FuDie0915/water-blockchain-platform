@@ -967,7 +967,7 @@ export default {
           })
           if (response.code === 0) {
             if (userType === 'enterprise') {
-              localStorage.setItem('companytoken', response.data.token)
+              localStorage.setItem('farmertoken', response.data.token)
             } else {
               localStorage.setItem('managertoken', response.data.token)
             }
@@ -993,7 +993,7 @@ export default {
       }
 
       const userType = routeName === 'enterprise-login' ? 'enterprise' : 'monitor'
-      const roleTokenKey = userType === 'enterprise' ? 'companytoken' : 'managertoken'
+      const roleTokenKey = userType === 'enterprise' ? 'farmertoken' : 'managertoken'
 
       if (!localStorage.getItem('satoken')) {
         this.$message.error('请先登录平台账号')
@@ -1036,8 +1036,8 @@ export default {
     // },
     logout() {
       if (this.currentLoginType === 'enterprise') {
-        Logout(localStorage.getItem('companytoken'))
-        localStorage.removeItem('companytoken')
+        Logout(localStorage.getItem('farmertoken'))
+        localStorage.removeItem('farmertoken')
       } else {
         Logout(localStorage.getItem('managertoken'))
         localStorage.removeItem('managertoken')
@@ -1092,7 +1092,7 @@ export default {
         const response = await Login(loginData)
         if (response.code === 0) {
           if (userType === 'enterprise') {
-            localStorage.setItem('companytoken', response.data.token)
+            localStorage.setItem('farmertoken', response.data.token)
           } else {
             localStorage.setItem('managertoken', response.data.token)
           }

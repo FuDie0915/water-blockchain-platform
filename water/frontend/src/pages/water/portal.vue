@@ -26,8 +26,8 @@
           </div>
           <div class="auth-item">
             <span>养殖户令牌</span>
-            <t-tag :theme="authStatus.companytoken ? 'success' : 'warning'" variant="light-outline">
-              {{ authStatus.companytoken ? '已就绪' : '未获取' }}
+            <t-tag :theme="authStatus.farmertoken ? 'success' : 'warning'" variant="light-outline">
+              {{ authStatus.farmertoken ? '已就绪' : '未获取' }}
             </t-tag>
           </div>
           <div class="auth-item">
@@ -78,7 +78,7 @@ export default {
       authStatus: {
         satoken: false,
         role: '',
-        companytoken: false,
+        farmertoken: false,
         managertoken: false,
       },
       rolePanels: [
@@ -141,14 +141,14 @@ export default {
       this.authStatus = {
         satoken: !!localStorage.getItem('satoken'),
         role: localStorage.getItem('platformUserRole') || '',
-        companytoken: !!localStorage.getItem('companytoken'),
+        farmertoken: !!localStorage.getItem('farmertoken'),
         managertoken: !!localStorage.getItem('managertoken'),
       };
     },
     formatRole(role) {
       if (role === 'admin') return '平台总览';
       if (role === 'manager') return '监管端';
-      if (role === 'company') return '养殖户端';
+      if (role === 'farmers') return '养殖户端';
       return '未识别';
     },
     go(path) {

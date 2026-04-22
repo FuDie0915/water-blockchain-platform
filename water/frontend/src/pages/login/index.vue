@@ -54,8 +54,8 @@
 
         <div class="role-switch">
           <button
-            :class="['role-option', { active: activeRole === 'company' }]"
-            @click="type === 'register' ? selectRegisterRole('company') : selectLoginRole('company')"
+            :class="['role-option', { active: activeRole === 'farmers' }]"
+            @click="type === 'register' ? selectRegisterRole('farmers') : selectLoginRole('farmers')"
           >
             {{ type === 'register' ? '养殖户注册' : '养殖户登录' }}
           </button>
@@ -97,8 +97,8 @@ export default {
   data() {
     return {
       type: 'login',
-      loginRole: 'company',
-      registerRole: 'company',
+      loginRole: 'farmers',
+      registerRole: 'farmers',
     };
   },
   computed: {
@@ -130,7 +130,7 @@ export default {
     switchType(val) {
       this.type = val;
       if (val === 'register') {
-        this.registerRole = this.registerRole || 'company';
+        this.registerRole = this.registerRole || 'farmers';
       }
     },
     selectLoginRole(role) {

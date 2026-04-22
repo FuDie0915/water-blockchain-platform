@@ -13,7 +13,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/blockchain
     username: root
-    password: 123456npm run dev'
+    password: 123456
     hikari:
       idle-timeout: 23333 # 10 minutes
       max-lifetime: 23333 # 30 minutes

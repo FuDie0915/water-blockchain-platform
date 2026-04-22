@@ -15,14 +15,14 @@ const instance = axios.create({
 });
 
 function clearTokens() {
-  ['satoken', 'companytoken', 'managertoken'].forEach((key) => {
+  ['satoken', 'farmertoken', 'managertoken'].forEach((key) => {
     localStorage.removeItem(key);
   });
 }
 
 instance.interceptors.request.use((config) => {
   const token = localStorage.getItem('satoken');
-  const companyToken = localStorage.getItem('companytoken');
+  const farmerToken = localStorage.getItem('farmertoken');
   const managerToken = localStorage.getItem('managertoken');
 
   config.headers = config.headers || {};
@@ -30,8 +30,8 @@ instance.interceptors.request.use((config) => {
   if (token) {
     config.headers.satoken = token;
   }
-  if (companyToken) {
-    config.headers.companytoken = companyToken;
+  if (farmerToken) {
+    config.headers.farmertoken = farmerToken;
   }
   if (managerToken) {
     config.headers.managertoken = managerToken;

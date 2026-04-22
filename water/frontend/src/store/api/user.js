@@ -2,7 +2,7 @@ import request from '@/utils/request';
 
 // 用户登录（多角色入口）
 export function login(data) {
-  const roleType = data.roleType || 'company';
+  const roleType = data.roleType || 'farmers';
 
   // 根据角色选择不同的登录接口
   if (roleType === 'admin' || data.userAccount === 'admin') {
@@ -40,7 +40,7 @@ export function login(data) {
 
 // 用户注册（仅养殖户 / 监管端）
 export function register(data) {
-  const roleType = data.roleType || 'company';
+  const roleType = data.roleType || 'farmers';
   const url = roleType === 'manager' ? '/gk_api/user/register/manager' : '/gk_api/user/register/farmers';
 
   return request({

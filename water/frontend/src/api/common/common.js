@@ -21,6 +21,24 @@ export function bindContract(data) {
   })
 }
 
+// 查询用户合约
+export function queryContract(contractType) {
+  return request({
+    url: '/gk_api/user_contract/query',
+    method: 'get',
+    params: { contractType }
+  })
+}
+
+// 解绑用户合约
+export function deleteContract(contractType) {
+  return request({
+    url: '/gk_api/user_contract/delete',
+    method: 'post',
+    params: { contractType }
+  })
+}
+
 // 区块链看板
 export function getBlockchainBoard() {
   return request({

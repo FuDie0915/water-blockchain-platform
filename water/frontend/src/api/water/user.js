@@ -77,8 +77,8 @@ export function updateUserStatus(data) {
     url: '/gk_api/user/admin/updateStatus',
     method: 'post',
     data: {
-      userId: data.userId || data.id,
-      userStatus: data.userStatus || data.status,
+      userId: data.userId,
+      userStatus: data.userStatus,
     }
   })
 }

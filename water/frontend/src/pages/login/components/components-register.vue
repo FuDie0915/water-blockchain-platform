@@ -101,7 +101,7 @@ const FORM_RULES = {
 };
 
 const ROLE_TEXT_MAP = {
-  company: '养殖户端',
+  farmers: '养殖户端',
   manager: '监管端',
 };
 
@@ -116,7 +116,7 @@ export default Vue.extend({
   props: {
     role: {
       type: String,
-      default: 'company',
+      default: 'farmers',
     },
   },
   data() {

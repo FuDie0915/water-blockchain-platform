@@ -16,23 +16,23 @@ function normalizeRoles(roleValue) {
 function getDefaultRouteByRoles(roles) {
   if (roles.includes('admin')) return '/dashboard/base';
   if (roles.includes('manager')) return '/water/monitor-login';
-  if (roles.includes('company')) return '/water/enterprise-login';
+  if (roles.includes('farmers')) return '/water/enterprise-login';
   return '/login';
 }
 
 function clearInvalidRoleTokens(roles) {
   if (roles.includes('admin')) {
-    localStorage.removeItem('companytoken');
+    localStorage.removeItem('farmertoken');
     localStorage.removeItem('managertoken');
     return;
   }
 
-  if (roles.includes('company')) {
+  if (roles.includes('farmers')) {
     localStorage.removeItem('managertoken');
   }
 
   if (roles.includes('manager')) {
-    localStorage.removeItem('companytoken');
+    localStorage.removeItem('farmertoken');
   }
 }
 

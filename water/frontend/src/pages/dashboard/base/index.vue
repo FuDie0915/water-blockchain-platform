@@ -438,7 +438,7 @@ export default {
         userName: '',
         userRole: 'farmers',
         phone: '',
-        userPassword: '123456',
+        userPassword: '',
       },
       thresholdForm: {
         doNormal: '≥ 5',
@@ -448,13 +448,8 @@ export default {
         nh3Normal: '≤ 0.2',
         nh3Warning: '0.2 ~ 0.5',
       },
-      backupJobs: [
-        { id: 1, title: 'MySQL 全量备份', time: '今日 03:00', size: '128 MB', status: '成功', theme: 'success' },
-        { id: 2, title: '链上回执归档', time: '今日 03:20', size: '42 MB', status: '成功', theme: 'success' },
-      ],
-      systemLogs: [
-        { id: 1, level: 'INFO', theme: 'success', module: '账号管理', message: '系统运行正常', time: '今日 10:06' },
-      ],
+      backupJobs: [],
+      systemLogs: [],
       tablePagination: {
         current: 1,
         pageSize: 5,
@@ -483,10 +478,10 @@ export default {
     businessOverviewCards() {
       const data = this.dashboardData || {};
       return [
-        { title: '养殖池总数', value: `${data.pondCount || 0}个`, description: '当前纳入平台监管的养殖池规模' },
-        { title: '活跃预警', value: `${data.warningCount || 0}条`, description: '待管理员关注或派发的异常事件' },
-        { title: '待审批许可', value: `${data.pendingPermitCount || 0}项`, description: '监管端待处理的许可申请数量' },
-        { title: '上链完整率', value: `${data.chainRate || '98'}%`, description: '最近业务台账链上固化完成度' },
+        { title: '养殖户总数', value: `${data.farmerCount || 0}户`, description: '当前已开通并纳入平台管理的养殖主体' },
+        { title: '已上链数据', value: `${data.onChainCount || 0}条`, description: '已上链水质数据条数' },
+        { title: '待审批许可', value: `${data.pendingCertCount || 0}项`, description: '监管端待处理的许可申请数量' },
+        { title: '已上链许可', value: `${data.certOnChainCount || 0}项`, description: '已上链的许可证数量' },
       ];
     },
     dataOverviewRows() {
@@ -498,11 +493,7 @@ export default {
       ];
     },
     governanceFocusList() {
-      return [
-        { title: '养殖户账号治理', description: '重点检查新开户、停用与权限收敛情况。', status: '正常', theme: 'success' },
-        { title: '监管端排班巡检', description: '确保各片区监管账号在线并及时处理告警。', status: '进行中', theme: 'primary' },
-        { title: '全域数据留痕', description: '持续跟踪全过程记录的上链完整率与一致性。', status: '需复核', theme: 'warning' },
-      ];
+      return [];
     },
     thresholdRules() {
       if (!this.thresholdData) {
@@ -551,34 +542,19 @@ export default {
             nodeStatusList: response.data.nodeStatusList || [],
           };
           if (!this.boardData.nodeStatusList.length) {
-            this.applyMockBoard();
+            this.boardData.nodeStatusList = [];
           }
         } else {
-          this.applyMockBoard();
+          this.boardData.nodeStatusList = [];
         }
       } catch (error) {
         console.error('加载区块链看板失败:', error);
-        this.applyMockBoard();
       } finally {
         this.tablePagination = {
           ...this.tablePagination,
           total: this.boardData.nodeCount || this.boardData.nodeStatusList.length || 0,
         };
       }
-    },
-    applyMockBoard() {
-      this.boardData = {
-        blockCount: 28416,
-        nodeCount: 4,
-        tranCount: 1268,
-        tranCount2: 9,
-        nodeStatusList: [
-          { nodeId: 'node0', blockNumber: 28416, pbftView: 7821, status: 1, latestStatusUpdateTime: Date.now() },
-          { nodeId: 'node1', blockNumber: 28416, pbftView: 7821, status: 1, latestStatusUpdateTime: Date.now() - 30000 },
-          { nodeId: 'node2', blockNumber: 28415, pbftView: 7820, status: 1, latestStatusUpdateTime: Date.now() - 45000 },
-          { nodeId: 'node3', blockNumber: 28412, pbftView: 7818, status: 0, latestStatusUpdateTime: Date.now() - 180000 },
-        ],
-      };
     },
     async fetchUsers() {
       this.loadingUsers = true;
@@ -668,7 +644,7 @@ export default {
         userName: '',
         userRole: 'farmers',
         phone: '',
-        userPassword: '123456',
+        userPassword: '',
       };
     },
     async handleCreateUser() {
@@ -679,7 +655,13 @@ export default {
       }
       this.creatingUser = true;
       try {
-        const res = await adminCreateUser(this.createUserForm);
+        const res = await adminCreateUser({
+          userAccount: this.createUserForm.userAccount,
+          userName: this.createUserForm.userName,
+          userRole: this.createUserForm.userRole,
+          userPassword: this.createUserForm.userPassword,
+          extInfo: this.createUserForm.phone ? JSON.stringify({ phone: this.createUserForm.phone }) : '',
+        });
         if (res.code === 0) {
           this.$message.success('用户创建成功');
           this.createUserDialogVisible = false;

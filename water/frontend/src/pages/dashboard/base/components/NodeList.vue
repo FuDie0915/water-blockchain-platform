@@ -28,32 +28,7 @@ export default {
   data() {
     return {
       loading: false,
-      nodeData: [
-        {
-          id: '64bec7d1758aa997972aa0efd7c05174209abeb6416601ecb08bd12f14d37ec01fb9895fcaffe796bfb264faca33e5595e018ede8bb',
-          height: '2319',
-          pbftView: '3025441',
-          status: '运行'
-        },
-        {
-          id: 'a475b514c990995f4337f99ff452a765b51f99c7206be70f2fd9ccade039d6b62bce7818a728241080f56af10715745527cdfa1844e',
-          height: '2319',
-          pbftView: '3025442',
-          status: '运行'
-        },
-        {
-          id: 'c3c38561ccd97c20d97c87e1e4bd2637c5fad0d01c48a502d0660e113674c4e047da826bfa29454900a05743904fa727a72035d0d',
-          height: '2319',
-          pbftView: '3025445',
-          status: '运行'
-        },
-        {
-          id: 'f69aa24b81c05903e309b991389c0565a414d1d97a06238a76671b54685225653ea7386685b5e7912c7352144b0a82bcbd10e89',
-          height: '2319',
-          pbftView: '3025444',
-          status: '运行'
-        }
-      ],
+      nodeData: [],
       columns: [
         {
           colKey: 'nodeId',

@@ -262,7 +262,7 @@
           <div class="detail-list">
             <div v-for="(item, index) in currentDetail" :key="index" class="detail-item">
               <t-checkbox 
-                :disabled="item.onChain"
+                :disabled="item.isOnChain"
                 v-model="item.selected"
                 @change="handleSingleSelect(item)"
               ></t-checkbox>
@@ -277,7 +277,7 @@
                   <div>故障位置：{{ item.faultLocation }}</div>
                 </div>
               </div>
-              <t-button theme="primary" v-if="!item.onChain" @click="handleSingleUpload(item)" :disabled="item.onChain" variant="outline" class="upload-btn">上链</t-button>
+              <t-button theme="primary" v-if="!item.isOnChain" @click="handleSingleUpload(item)" :disabled="item.isOnChain" variant="outline" class="upload-btn">上链</t-button>
               <t-button theme="success" v-else variant="outline" class="delete-btn">已上链</t-button>
 
             </div>
@@ -542,8 +542,8 @@ export default {
 
       droneBlockchainAddress: '',
       // 账户信息
-      droneAccount: 'user1',
-      dronePassword: '123456',
+      droneAccount: '',
+      dronePassword: '',
       
       // 资源列表
       resourceDialogVisible: false,

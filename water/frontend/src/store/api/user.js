@@ -49,7 +49,7 @@ export function register(data) {
     data: {
       userAccount: data.userAccount,
       userPassword: data.userPassword,
-      userName: data.userName || '',
+      extInfo: JSON.stringify({ userName: data.userName || '' }),
       captchaKey: data.captchaKey || '',
       captchaCode: data.captchaCode || '',
     },

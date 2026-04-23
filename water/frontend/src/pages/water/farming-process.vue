@@ -493,7 +493,7 @@ export default {
 
       return {
         farmerName: pondInfo.farmerName || firstSeed.farmerName || '全部养殖户',
-        farmName: pondInfo.farmName || firstSeed.farmName || '示范养殖场',
+        farmName: pondInfo.farmName || firstSeed.farmName || '',
         species: pondInfo.species || firstSeed.category || '--',
         stockDate: seedDate,
         quantity: firstSeed.quantity || '--',
@@ -616,8 +616,9 @@ export default {
           this.pondOptions = list.map(item => ({
             value: String(item.id),
             label: item.pondName || item.name || `养殖池${item.id}`,
-            species: item.species || item.fishType || '',
-            status: item.status || 'PENDING',
+            species: item.breedType || item.species || item.fishType || '',
+            status: item.auditStatus !== undefined ? (item.auditStatus === 1 ? 'APPROVED' : (item.auditStatus === 2 ? 'REJECTED' : 'PENDING')) : (item.status !== undefined ? item.status : 'PENDING'),
+            pondStatus: item.status,
             farmerId: item.farmerId ? String(item.farmerId) : null,
             farmerName: item.farmerName || item.userName || '',
             farmName: item.farmName || '',
@@ -703,17 +704,65 @@ export default {
         }
       }
 
-      return list.map(item => ({
-        ...item,
-        id: item.id,
-        pondId: String(item.pondId || ''),
-        pondName: item.pondName || '',
-        farmerId: item.farmerId ? String(item.farmerId) : null,
-        farmerName: item.farmerName || item.userName || '',
-        farmName: item.farmName || '',
-        date: item.date || item.createTime?.split(' ')[0] || '',
-        time: item.time || item.createTime?.split(' ')[1]?.substring(0, 5) || '',
-      }));
+      return list.map(item => {
+        const mapped = {
+          ...item,
+          id: item.id,
+          pondId: String(item.pondId || ''),
+          pondName: item.pondName || '',
+          farmerId: item.farmerId ? String(item.farmerId) : null,
+          farmerName: item.farmerName || item.userName || '',
+          farmName: item.farmName || '',
+        };
+
+        // 根据后端Entity字段特征做类型映射
+        if ('recordDate' in item || 'seedType' in item) {
+          // 苗种记录
+          const d = item.recordDate ? new Date(item.recordDate) : null;
+          mapped.date = d ? d.toISOString().split('T')[0] : '';
+          mapped.time = d ? d.toTimeString().substring(0, 5) : '';
+          mapped.batchNo = item.batchNo || '';
+          mapped.category = item.seedType || '';
+          mapped.quantity = item.weight ? `${item.weight}kg` : '';
+          mapped.source = item.source || '';
+          mapped.operator = item.manager || '';
+        } else if ('feedDate' in item || 'feedBrand' in item) {
+          // 投喂记录
+          const d = item.feedDate ? new Date(item.feedDate) : null;
+          mapped.date = d ? d.toISOString().split('T')[0] : '';
+          mapped.time = d ? d.toTimeString().substring(0, 5) : '';
+          mapped.brand = item.feedBrand || '';
+          mapped.amount = item.feedAmount ? `${item.feedAmount}kg` : '';
+          mapped.operator = item.manager || '';
+        } else if ('medicineDate' in item || 'medicineName' in item) {
+          // 用药记录
+          const d = item.medicineDate ? new Date(item.medicineDate) : null;
+          mapped.date = d ? d.toISOString().split('T')[0] : '';
+          mapped.time = d ? d.toTimeString().substring(0, 5) : '';
+          mapped.name = item.medicineName || '';
+          mapped.withdrawal = item.withdrawalStart ? `${item.withdrawalStart} ~ ${item.withdrawalEnd}` : '';
+          mapped.operator = item.manager || '';
+        } else if ('harvestDate' in item || 'totalWeight' in item) {
+          // 收获记录
+          const d = item.harvestDate ? new Date(item.harvestDate) : null;
+          mapped.date = d ? d.toISOString().split('T')[0] : '';
+          mapped.time = d ? d.toTimeString().substring(0, 5) : '';
+          mapped.destination = item.buyerInfo || '';
+          mapped.weight = item.totalWeight ? `${item.totalWeight}kg` : '';
+          mapped.operator = item.manager || '';
+        } else {
+          // 兜底
+          mapped.date = item.date || item.createTime?.split(' ')[0] || '';
+          mapped.time = item.time || item.createTime?.split(' ')[1]?.substring(0, 5) || '';
+        }
+
+        // 审核状态映射：后端 auditStatus(0/1/2) → 前端 status(APPROVED/PENDING/REJECTED)
+        if (item.auditStatus !== undefined) {
+          mapped.status = item.auditStatus === 1 ? 'APPROVED' : (item.auditStatus === 2 ? 'REJECTED' : 'PENDING');
+        }
+
+        return mapped;
+      });
     },
     filterRecordsByCurrentScope(records) {
       let result = Array.isArray(records) ? [...records] : [];
@@ -788,6 +837,7 @@ export default {
             recordDate: date,
             manager: operator,
             seedType: primaryValue,
+            seedSpec: '',
             weight: Number(secondaryValue),
             remark: remark || '',
           });
@@ -808,6 +858,8 @@ export default {
             medicineName: primaryValue,
             dosage: secondaryValue,
             purpose: '日常维护',
+            withdrawalStart: null,
+            withdrawalEnd: null,
             remark: remark || '',
           });
         } else {
@@ -816,7 +868,11 @@ export default {
             harvestDate: date,
             manager: operator,
             batchNo: primaryValue,
+            spec: '',
             totalWeight: Number(secondaryValue),
+            survivalRate: null,
+            buyerInfo: '',
+            qualityResult: '',
             remark: remark || '',
           });
         }

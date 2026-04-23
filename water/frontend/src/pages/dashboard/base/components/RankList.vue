@@ -170,10 +170,10 @@ export default {
         //   cell: (h, { row }) => {
         //     return h('t-tag', {
         //       props: {
-        //         theme: row.onChain ? 'success' : 'danger',
+        //         theme: row.isOnChain ? 'success' : 'danger',
         //         variant: 'light'
         //       }
-        //     }, row.onChain ? '已上链' : '未上链');
+        //     }, row.isOnChain ? '已上链' : '未上链');
         //   }
         // }
       ],
@@ -201,7 +201,7 @@ export default {
           width: '200',
         },
         {
-          colKey: 'onChain',
+          colKey: 'isOnChain',
           title: '链上状态',
           width: '103',
           cell: (h, { row }) => {
@@ -210,7 +210,7 @@ export default {
                 theme: row.status === '正常' ? 'success' : 'danger',
                 variant: 'light'
               }
-            }, row.onChain ? '已上链' : '未上链');
+            }, row.isOnChain ? '已上链' : '未上链');
           }
         },
         {
@@ -251,7 +251,7 @@ export default {
           width: '200',
         },
         {
-          colKey: 'onChain',
+          colKey: 'isOnChain',
           title: '是否上链',
           width: '100',
           cell: (h, { row }) => {
@@ -260,7 +260,7 @@ export default {
                 theme: row.status === '正常' ? 'success' : 'danger',
                 variant: 'light'
               }
-            }, row.onChain ? '已上链' : '未上链');
+            }, row.isOnChain ? '已上链' : '未上链');
           }
         },
         {

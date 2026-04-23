@@ -168,7 +168,7 @@
                   </div>
                   <div class="account-item">
                     <label>养殖户默认密码</label>
-                    <span>{{ enterprisePassword || '123456' }}</span>
+                    <span>{{ enterprisePassword || '--' }}</span>
                   </div>
                   <div class="account-item">
                     <label>区块链地址</label>
@@ -188,8 +188,8 @@
                       <div class="warning-item__time">{{ item.pondName || activePondLabel }} · {{ item.time }} · {{ item.evidenceNo }}</div>
                     </div>
                     <div class="trace-item__aside">
-                      <t-tag :theme="item.onChain ? 'success' : 'warning'" variant="light-outline">
-                        {{ item.onChain ? '已上链' : '待上链' }}
+                      <t-tag :theme="item.isOnChain ? 'success' : 'warning'" variant="light-outline">
+                        {{ item.isOnChain ? '已上链' : '待上链' }}
                       </t-tag>
                     </div>
                   </div>
@@ -321,8 +321,8 @@
                         >
                           <div class="traceability-record-card__head">
                             <span>{{ item.title }}</span>
-                            <t-tag :theme="item.onChain ? 'success' : 'warning'" variant="light-outline">
-                              {{ item.onChain ? '已上链' : '待上链' }}
+                            <t-tag :theme="item.isOnChain ? 'success' : 'warning'" variant="light-outline">
+                              {{ item.isOnChain ? '已上链' : '待上链' }}
                             </t-tag>
                           </div>
                           <div class="warning-item__time">{{ item.pondName || activePondLabel }} · {{ item.time }}</div>
@@ -342,7 +342,7 @@
                       <div class="certificate-sheet">
                         <div class="certificate-row">
                           <div class="certificate-label">养殖户</div>
-                          <div class="certificate-value">{{ currentTraceabilityCertificate.ownerName || '李大海' }}</div>
+                          <div class="certificate-value">{{ currentTraceabilityCertificate.ownerName || '--' }}</div>
                         </div>
                         <div class="certificate-row">
                           <div class="certificate-label">存证内容</div>
@@ -367,8 +367,8 @@
                       </div>
 
 
-                      <div :class="['certificate-verify-bar', { pending: !currentTraceabilityCertificate.onChain }]">
-                        <span class="certificate-verify-bar__icon">{{ currentTraceabilityCertificate.onChain ? '✔' : '…' }}</span>
+                      <div :class="['certificate-verify-bar', { pending: !currentTraceabilityCertificate.isOnChain }]">
+                        <span class="certificate-verify-bar__icon">{{ currentTraceabilityCertificate.isOnChain ? '✔' : '…' }}</span>
                         <span>{{ currentTraceabilityCertificate.verifyText }}</span>
                       </div>
                     </div>
@@ -448,7 +448,7 @@
                   </div>
                   <div class="account-item">
                     <label>监管默认密码</label>
-                    <span>{{ monitorPassword || '123456' }}</span>
+                    <span>{{ monitorPassword || '--' }}</span>
                   </div>
                   <div class="account-item">
                     <label>区块链地址</label>
@@ -803,21 +803,6 @@ import { WATER_DATA_TYPES, METRIC_LEVEL_THEME, getWaterMetricLevel } from '@/con
 
 echarts.use([TooltipComponent, LegendComponent, GridComponent, LineChart, CanvasRenderer]);
 
-const MOCK_PERMIT_IMAGE = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-  <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-    <defs>
-      <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-        <stop stop-color="#eff7ff" offset="0%" />
-        <stop stop-color="#d8ebff" offset="100%" />
-      </linearGradient>
-    </defs>
-    <rect width="120" height="120" rx="18" fill="url(#g)" />
-    <rect x="20" y="18" width="80" height="84" rx="12" fill="#ffffff" stroke="#8db8f5" />
-    <text x="60" y="52" font-size="16" text-anchor="middle" fill="#1f74d8" font-family="Arial">Permit</text>
-    <text x="60" y="76" font-size="12" text-anchor="middle" fill="#4f6780" font-family="Arial">演示数据</text>
-  </svg>
-`)}`;
-
 export default {
   name: 'WaterWorkbench',
   components: {
@@ -860,180 +845,13 @@ export default {
       monitorTableData: [],
       turbidityTableData: [],
       tdsTableData: [],
-      pondOptions: [
-        { value: 'pond-1', label: '1号养殖池', tone: 'blue' },
-        { value: 'pond-2', label: '2号养殖池', tone: 'teal' },
-        { value: 'pond-3', label: '3号养殖池', tone: 'purple' },
-      ],
-      activePondId: 'pond-2',
-      selectedTraceabilityId: 1,
-      pondMetricsMap: {
-        'pond-1': [
-          { metricCode: 'WATER_TEMP', value: 25.8, tip: '温度平稳，适合继续保持当前换水节奏。' },
-          { metricCode: 'SALINITY', value: 23.9, tip: '盐度稳定，符合本池养殖区间。' },
-          { metricCode: 'PH', value: 8.05, tip: '酸碱度正常。' },
-          { metricCode: 'DO', value: 5.3, tip: '溶解氧充足，夜间表现平稳。' },
-          { metricCode: 'AMMONIA_N', value: 0.14, tip: '氨氮处于安全范围。' },
-          { metricCode: 'NITRITE', value: 0.08, tip: '亚硝酸盐正常。' },
-        ],
-        'pond-2': [
-          { metricCode: 'WATER_TEMP', value: 26.4, tip: '温度适宜，维持当前增氧与换水节奏。' },
-          { metricCode: 'SALINITY', value: 24.8, tip: '盐度稳定，符合当前海水养殖区间。' },
-          { metricCode: 'PH', value: 8.1, tip: '酸碱度正常，可继续保持当前日常巡检。' },
-          { metricCode: 'DO', value: 4.2, tip: '溶解氧偏低，建议重点关注夜间增氧。' },
-          { metricCode: 'AMMONIA_N', value: 0.16, tip: '氨氮处于可控区间。' },
-          { metricCode: 'NITRITE', value: 0.13, tip: '亚硝酸盐进入预警区间，建议复测并换水。' },
-        ],
-        'pond-3': [
-          { metricCode: 'WATER_TEMP', value: 27.1, tip: '水温略高，需关注午后波动。' },
-          { metricCode: 'SALINITY', value: 26.1, tip: '盐度正常。' },
-          { metricCode: 'PH', value: 8.18, tip: 'pH 略高但仍处于可控范围。' },
-          { metricCode: 'DO', value: 4.9, tip: '溶解氧接近警戒线，建议夜间继续观察。' },
-          { metricCode: 'AMMONIA_N', value: 0.19, tip: '氨氮接近预警值。' },
-          { metricCode: 'NITRITE', value: 0.09, tip: '亚硝酸盐正常。' },
-        ],
-      },
-      warningTodoList: [
-        {
-          id: 1,
-          pondId: 'pond-2',
-          pondName: '2号养殖池',
-          title: '2号池亚硝酸盐偏高',
-          type: 'water_quality',
-          level: 'warning',
-          levelText: '预警',
-          theme: 'warning',
-          time: '今日 10:20',
-          detail: '当前数值 0.13 mg/L，建议立即复测并安排局部换水。',
-        },
-        {
-          id: 2,
-          pondId: 'pond-2',
-          pondName: '2号养殖池',
-          title: '夜间溶解氧存在下降风险',
-          type: 'environment',
-          level: 'warning',
-          levelText: '关注',
-          theme: 'warning',
-          time: '今日 05:40',
-          detail: '凌晨时段 DO 最低 4.2 mg/L，建议提前开启增氧设备。',
-        },
-        {
-          id: 3,
-          pondId: 'pond-1',
-          pondName: '1号养殖池',
-          title: '1号池状态平稳',
-          type: 'water_quality',
-          level: 'normal',
-          levelText: '正常',
-          theme: 'success',
-          time: '今日 09:15',
-          detail: '近 24 小时主要指标均在正常范围内。',
-        },
-      ],
-      farmingLedgerItems: [
-        { id: 1, pondId: 'pond-1', pondName: '1号养殖池', title: '苗种投放登记', time: '04-05 09:30', status: '已存证', detail: '南美白对虾苗 12000 尾，来源已登记。' },
-        { id: 2, pondId: 'pond-2', pondName: '2号养殖池', title: '今日投喂记录', time: '04-06 07:10', status: '待上链', detail: '投喂高蛋白饲料 18kg，计划晚间复投 12kg。' },
-        { id: 3, pondId: 'pond-3', pondName: '3号养殖池', title: '用药巡检记录', time: '04-06 08:45', status: '无异常', detail: '今日未使用药物，巡检已完成。' },
-      ],
-      traceabilityTimeline: [
-        {
-          id: 1,
-          pondId: 'pond-2',
-          pondName: '2号养殖池',
-          title: '水质日报已生成存证',
-          time: '今日 09:00',
-          evidenceNo: 'BC-WATER-20260406-001',
-          onChain: true,
-          ownerName: '李大海',
-          contentTitle: '水质监测记录',
-          chainTime: '2026-04-06 16:33:22',
-          hash: '0x8f2e9d7a3b1c6f4e2d9a8b7c5e3f1a2d4c6b8e9f7a2d',
-          blockHeight: '1256800',
-          description: '本数据已上链存证，不可篡改，监管部门可核验。',
-          verifyText: '区块链存证验证通过',
-        },
-        {
-          id: 2,
-          pondId: 'pond-2',
-          pondName: '2号养殖池',
-          title: '投喂记录待确认上链',
-          time: '今日 07:15',
-          evidenceNo: 'BC-FEED-20260406-003',
-          onChain: false,
-          ownerName: '李大海',
-          contentTitle: '养殖投喂记录',
-          chainTime: '等待上链确认',
-          hash: '',
-          blockHeight: '--',
-          description: '记录已提交到存证队列，待完成链上确认后可生成正式回执。',
-          verifyText: '正在等待链上确认',
-        },
-        {
-          id: 3,
-          pondId: 'pond-1',
-          pondName: '1号养殖池',
-          title: '许可证审核状态同步',
-          time: '昨日 17:40',
-          evidenceNo: 'BC-PERMIT-20260405-002',
-          onChain: true,
-          ownerName: '李大海',
-          contentTitle: '许可证审核记录',
-          chainTime: '2026-04-05 17:40:12',
-          hash: '0x5cd4a91f8e33bc7d4a2e19b0cc8d12346f8e0a7c19d2ef5a',
-          blockHeight: '1256431',
-          description: '许可证审批结论已完成存证留痕，可用于后续监管核验。',
-          verifyText: '区块链存证验证通过',
-        },
-        {
-          id: 4,
-          pondId: 'pond-2',
-          pondName: '2号养殖池',
-          title: '苗种投放记录已同步存证',
-          time: '昨日 16:20',
-          evidenceNo: 'BC-SEED-20260405-006',
-          onChain: true,
-          ownerName: '李大海',
-          contentTitle: '苗种投放记录',
-          chainTime: '2026-04-05 16:20:45',
-          hash: '0x73b5de0ca14f92d6be1a7c5920df48ab35cde7196ab40e2f',
-          blockHeight: '1256315',
-          description: '苗种投放批次与来源信息已完成链上固化，可追溯来源与时间。',
-          verifyText: '区块链存证验证通过',
-        },
-        {
-          id: 5,
-          pondId: 'pond-2',
-          pondName: '2号养殖池',
-          title: '增氧处置记录待复核',
-          time: '昨日 06:45',
-          evidenceNo: 'BC-ALERT-20260405-009',
-          onChain: false,
-          ownerName: '李大海',
-          contentTitle: '预警处置记录',
-          chainTime: '等待上链确认',
-          hash: '',
-          blockHeight: '--',
-          description: '增氧处置记录已提交，待监管复核通过后同步生成链上回执。',
-          verifyText: '待监管复核并上链',
-        },
-        {
-          id: 6,
-          pondId: 'pond-3',
-          pondName: '3号养殖池',
-          title: '用药巡检记录已归档',
-          time: '昨日 11:30',
-          evidenceNo: 'BC-MED-20260405-011',
-          onChain: true,
-          ownerName: '李大海',
-          contentTitle: '用药巡检记录',
-          chainTime: '2026-04-05 11:30:27',
-          hash: '0x92adbe71c4f58e2061d8f7c3b9e4a76dd8cb21ae0f94b3c5',
-          blockHeight: '1256102',
-          description: '用药巡检结果已归档到链上，可用于后续批次溯源与合规核查。',
-          verifyText: '区块链存证验证通过',
-        },
-      ],
+      pondOptions: [],
+      activePondId: '',
+      selectedTraceabilityId: null,
+      pondMetricsMap: {},
+      warningTodoList: [],
+      farmingLedgerItems: [],
+      traceabilityTimeline: [],
       farmerView: 'monitor',
       trendRange: '24h',
       manualEntryDialogVisible: false,
@@ -1053,56 +871,22 @@ export default {
       chartRefreshTimer: null,
       chartRenderRetryTimer: null,
       regulatorChartRetryTimer: null,
-      chartRefreshTick: 0,
+      chartRefreshTick: 0, // deprecated, kept for compatibility
       activeRegulatorRegion: 'all',
       regulatorRegionOptions: [
         { value: 'all', label: '全部片区' },
-        { value: 'east', label: '东港示范区' },
-        { value: 'west', label: '西湾养殖区' },
-        { value: 'south', label: '南堤循环水区' },
       ],
       manualEntryForm: {
         metricCode: 'DO',
         value: '',
         remark: '',
       },
-      monitorRecords: [
-        { id: 1, pondId: 'pond-2', pondName: '2号养殖池', time: '2026-04-06 10:20', metricCode: 'NITRITE', metricLabel: '亚硝酸盐', valueText: '0.13 mg/L', sourceText: '自动采集', levelText: '预警', theme: 'warning', suggestion: '建议局部换水并在 2 小时后复测。' },
-        { id: 2, pondId: 'pond-2', pondName: '2号养殖池', time: '2026-04-06 09:40', metricCode: 'DO', metricLabel: '溶解氧', valueText: '4.2 mg/L', sourceText: '自动采集', levelText: '预警', theme: 'warning', suggestion: '夜间提前增氧，避免清晨缺氧。' },
-        { id: 3, pondId: 'pond-1', pondName: '1号养殖池', time: '2026-04-06 08:50', metricCode: 'PH', metricLabel: 'pH', valueText: '8.05', sourceText: '人工补录', levelText: '正常', theme: 'success', suggestion: '酸碱度正常，保持当前管理方式。' },
-        { id: 4, pondId: 'pond-3', pondName: '3号养殖池', time: '2026-04-06 07:30', metricCode: 'WATER_TEMP', metricLabel: '水温', valueText: '27.1 ℃', sourceText: '自动采集', levelText: '正常', theme: 'success', suggestion: '温度稳定，适合当前养殖阶段。' },
-        { id: 5, pondId: 'pond-1', pondName: '1号养殖池', time: '2026-04-05 20:10', metricCode: 'SALINITY', metricLabel: '盐度', valueText: '23.9 ‰', sourceText: '自动采集', levelText: '正常', theme: 'success', suggestion: '盐度稳定，适合海水养殖。' },
-      ],
-      regulatorPondSnapshots: [
-        { id: 1, regionCode: 'east', region: '东港示范区', companyName: '蓝海一号养殖场', pondName: '东港-1号池', doValue: 4.1, phValue: 8.17, salinity: 25.2, score: 82, warningCount: 2, statusText: '重点关注', theme: 'warning', lastUpload: '10:18', note: '凌晨溶解氧走低，已通知养殖户提前开启增氧设备。' },
-        { id: 2, regionCode: 'east', region: '东港示范区', companyName: '滨海虾贝联合社', pondName: '东港-2号池', doValue: 5.4, phValue: 8.05, salinity: 24.7, score: 91, warningCount: 0, statusText: '运行稳定', theme: 'success', lastUpload: '09:42', note: '当前片区指标平稳，可维持常规巡检频率。' },
-        { id: 3, regionCode: 'west', region: '西湾养殖区', companyName: '澄海生态养殖合作社', pondName: '西湾-3号池', doValue: 3.8, phValue: 8.24, salinity: 26.1, score: 76, warningCount: 3, statusText: '高风险', theme: 'danger', lastUpload: '09:50', note: '氨氮与溶解氧连续预警，建议尽快安排现场复核。' },
-        { id: 4, regionCode: 'west', region: '西湾养殖区', companyName: '澄海生态养殖合作社', pondName: '西湾-1号池', doValue: 5.1, phValue: 8.09, salinity: 25.4, score: 88, warningCount: 1, statusText: '可控', theme: 'primary', lastUpload: '08:56', note: '近期波动已回落，仍需持续观察晚间数据。' },
-        { id: 5, regionCode: 'south', region: '南堤循环水区', companyName: '南堤智慧工厂化基地', pondName: '南堤-A池', doValue: 4.6, phValue: 8.14, salinity: 23.8, score: 84, warningCount: 1, statusText: '轻度预警', theme: 'warning', lastUpload: '10:05', note: '盐度略有波动，系统已提醒养殖户复核补水方案。' },
-        { id: 6, regionCode: 'south', region: '南堤循环水区', companyName: '南堤智慧工厂化基地', pondName: '南堤-B池', doValue: 5.2, phValue: 8.02, salinity: 24.2, score: 90, warningCount: 0, statusText: '运行稳定', theme: 'success', lastUpload: '09:12', note: '循环水系统状态良好，今日未触发异常。' },
-      ],
-      regulatorWarningItems: [
-        { id: 1, regionCode: 'west', region: '西湾养殖区', companyName: '澄海生态养殖合作社', pondName: '西湾-3号池', title: '氨氮连续两次超阈值', levelText: '高风险', theme: 'danger', time: '今日 09:50', progress: '待核查', detail: '当前 0.46 mg/L，建议派发现场抽检并跟踪换水处理结果。' },
-        { id: 2, regionCode: 'east', region: '东港示范区', companyName: '蓝海一号养殖场', pondName: '东港-1号池', title: '夜间溶解氧偏低', levelText: '预警', theme: 'warning', time: '今日 05:30', progress: '处理中', detail: '最低值 4.1 mg/L，已通知增氧并要求上传复测结果。' },
-        { id: 3, regionCode: 'south', region: '南堤循环水区', companyName: '南堤智慧工厂化基地', pondName: '南堤-A池', title: '盐度波动异常', levelText: '关注', theme: 'primary', time: '今日 08:40', progress: '复测中', detail: '较昨日波动 1.8‰，建议复核补水与循环参数。' },
-        { id: 4, regionCode: 'west', region: '西湾养殖区', companyName: '澄海生态养殖合作社', pondName: '西湾-1号池', title: '设备离线 15 分钟', levelText: '已恢复', theme: 'success', time: '今日 07:25', progress: '已闭环', detail: '采集终端已重连，系统自动补传缺失数据。' },
-      ],
-      regulatorFarmerProfiles: [
-        { id: 1, accountId: 'COMP-1001', regionCode: 'east', region: '东港示范区', companyName: '蓝海一号养殖场', pondCount: 3, latestUpload: '今日 10:18', licenseStatusText: '许可证有效', licenseTheme: 'success', chainRate: '92%', riskText: '中风险', riskTheme: 'warning' },
-        { id: 2, accountId: 'COMP-1002', regionCode: 'east', region: '东港示范区', companyName: '滨海虾贝联合社', pondCount: 2, latestUpload: '今日 09:42', licenseStatusText: '许可证有效', licenseTheme: 'success', chainRate: '95%', riskText: '低风险', riskTheme: 'success' },
-        { id: 3, accountId: 'COMP-1003', regionCode: 'west', region: '西湾养殖区', companyName: '澄海生态养殖合作社', pondCount: 4, latestUpload: '今日 09:50', licenseStatusText: '待补充材料', licenseTheme: 'warning', chainRate: '81%', riskText: '高风险', riskTheme: 'danger' },
-        { id: 4, accountId: 'COMP-1004', regionCode: 'south', region: '南堤循环水区', companyName: '南堤智慧工厂化基地', pondCount: 5, latestUpload: '今日 10:05', licenseStatusText: '许可证有效', licenseTheme: 'success', chainRate: '97%', riskText: '低风险', riskTheme: 'success' },
-      ],
-      regulatorChainRecords: [
-        { id: 1, businessType: '水质日报', evidenceNo: 'BC-REG-20260406-018', companyName: '蓝海一号养殖场', uploadTime: '2026-04-06 10:20', verifyText: '校验通过', theme: 'success', hash: '0x8ab2...91f0' },
-        { id: 2, businessType: '预警处置', evidenceNo: 'BC-REG-20260406-021', companyName: '澄海生态养殖合作社', uploadTime: '2026-04-06 09:56', verifyText: '待复核', theme: 'warning', hash: '0x5dc1...4aa7' },
-        { id: 3, businessType: '许可证审批', evidenceNo: 'BC-REG-20260405-113', companyName: '南堤智慧工厂化基地', uploadTime: '2026-04-05 17:42', verifyText: '已归档', theme: 'primary', hash: '0x2f31...7ce2' },
-      ],
-      regulatorProcessTimeline: [
-        { id: 1, title: '西湾养殖区高风险池已发起现场复核', time: '今日 10:12', detail: '监管端已下发抽检任务，待养殖户回传处置结果与照片。', statusText: '处理中', theme: 'warning' },
-        { id: 2, title: '东港示范区今日巡检批次已归档', time: '今日 09:35', detail: '12 条监测数据已生成监管留痕并同步至链上存证队列。', statusText: '已归档', theme: 'success' },
-        { id: 3, title: '南堤循环水区许可证复核完成', time: '昨日 17:42', detail: '审批意见与合同摘要已同步入监管台账。', statusText: '已完成', theme: 'primary' },
-      ],
+      monitorRecords: [],
+      regulatorPondSnapshots: [],
+      regulatorWarningItems: [],
+      regulatorFarmerProfiles: [],
+      regulatorChainRecords: [],
+      regulatorProcessTimeline: [],
       selectedTdsRowKeys: [],
       selectedTurbidityRowKeys: [],
       turbidityPagination: {
@@ -1335,10 +1119,10 @@ export default {
           cell: (h, { row }) => h('t-tag', { props: { theme: row.status === '正常' ? 'success' : 'danger', variant: 'light' } }, row.status),
         },
         {
-          colKey: 'onChain',
+          colKey: 'isOnChain',
           title: '是否上链',
           width: 110,
-          cell: (h, { row }) => h('t-tag', { props: { theme: row.onChain ? 'success' : 'warning', variant: 'light' } }, row.onChain ? '已上链' : '未上链'),
+          cell: (h, { row }) => h('t-tag', { props: { theme: row.isOnChain ? 'success' : 'warning', variant: 'light' } }, row.isOnChain ? '已上链' : '未上链'),
         },
       ],
       tdsColumns: [
@@ -1356,10 +1140,10 @@ export default {
           cell: (h, { row }) => h('t-tag', { props: { theme: row.status === '正常' ? 'success' : 'danger', variant: 'light' } }, row.status),
         },
         {
-          colKey: 'onChain',
+          colKey: 'isOnChain',
           title: '是否上链',
           width: 110,
-          cell: (h, { row }) => h('t-tag', { props: { theme: row.onChain ? 'success' : 'warning', variant: 'light' } }, row.onChain ? '已上链' : '未上链'),
+          cell: (h, { row }) => h('t-tag', { props: { theme: row.isOnChain ? 'success' : 'warning', variant: 'light' } }, row.isOnChain ? '已上链' : '未上链'),
         },
       ],
       farmerMonitorColumns: [
@@ -1516,10 +1300,10 @@ export default {
           id: item.id,
           time: item.time,
           actionType: this.getChainActionType(item),
-          actionTheme: item.onChain ? 'primary' : 'warning',
+          actionTheme: item.isOnChain ? 'primary' : 'warning',
           detail: `${item.title} · ${item.evidenceNo}`,
-          statusText: item.onChain ? '已上链' : '待上链',
-          statusTheme: item.onChain ? 'success' : 'warning',
+          statusText: item.isOnChain ? '已上链' : '待上链',
+          statusTheme: item.isOnChain ? 'success' : 'warning',
           hashShort: this.getChainHashSummary(item, index),
         }))
         .slice(0, 5);
@@ -1528,7 +1312,7 @@ export default {
       return this.filteredWarningList.filter((item) => item.level !== 'normal').length;
     },
     todayChainCount() {
-      return this.filteredTraceabilityTimeline.filter((item) => item.onChain).length;
+      return this.filteredTraceabilityTimeline.filter((item) => item.isOnChain).length;
     },
     manualEntryMetricOptions() {
       return this.primaryThresholdRules.map((item) => ({
@@ -1538,9 +1322,9 @@ export default {
     },
     monitorPeriodSummary() {
       const configMap = {
-        '24h': { label: '近24小时', samples: 24, abnormal: 2, onChain: 6, tip: '更适合查看实时波动与短时风险。' },
-        '7d': { label: '近7天', samples: 168, abnormal: 5, onChain: 18, tip: '适合观察本周水质变化趋势。' },
-        '30d': { label: '近30天', samples: 720, abnormal: 11, onChain: 42, tip: '适合复盘阶段性养殖环境变化。' },
+        '24h': { label: '近24小时', samples: this.monitorRecords.length, abnormal: this.monitorRecords.filter(r => r.levelText === '预警' || r.levelText === '危险').length, onChain: this.monitorRecords.filter(r => r.isOnChain).length, tip: '更适合查看实时波动与短时风险。' },
+        '7d': { label: '近7天', samples: this.monitorRecords.length, abnormal: this.monitorRecords.filter(r => r.levelText === '预警' || r.levelText === '危险').length, onChain: this.monitorRecords.filter(r => r.isOnChain).length, tip: '适合观察本周水质变化趋势。' },
+        '30d': { label: '近30天', samples: this.monitorRecords.length, abnormal: this.monitorRecords.filter(r => r.levelText === '预警' || r.levelText === '危险').length, onChain: this.monitorRecords.filter(r => r.isOnChain).length, tip: '适合复盘阶段性养殖环境变化。' },
       };
       return configMap[this.trendRange] || configMap['24h'];
     },
@@ -1583,7 +1367,7 @@ export default {
           ...matchedProfile,
           id: latestPermit.id || matchedProfile.id || index + 1,
           companyName,
-          accountId: matchedProfile.accountId || `COMP-${1001 + index}`,
+          accountId: matchedProfile.accountId || '',
           latestUpload: latestPermit.createTime || matchedProfile.latestUpload || '--',
           licenseStatusText: permitState.text,
           licenseTheme: permitState.theme,
@@ -1665,58 +1449,24 @@ export default {
       };
     },
     monitorTrendData() {
-      const baseMap = {
-        '24h': {
-          xAxis: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00', '24:00'],
-          doBase: [5.9, 5.6, 5.2, 4.8, 4.4, 4.1, 4.3, 4.7, 5.0, 5.4, 5.7, 5.5, 5.3],
-          phBase: [8.03, 8.02, 8.00, 7.98, 8.01, 8.06, 8.12, 8.18, 8.16, 8.11, 8.07, 8.04, 8.02],
-        },
-        '7d': {
-          xAxis: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-          doBase: [5.8, 5.5, 5.1, 4.7, 5.0, 4.6, 5.2],
-          phBase: [8.09, 8.15, 8.07, 8.21, 8.12, 8.04, 8.13],
-        },
-        '30d': {
-          xAxis: ['第1周', '第2周', '第3周', '第4周', '第5周', '第6周'],
-          doBase: [5.7, 5.4, 5.0, 4.6, 4.9, 5.2],
-          phBase: [8.08, 8.14, 8.17, 8.03, 8.10, 8.15],
-        },
-      };
+      // 如果没有监测记录数据，返回空趋势
+      if (!this.monitorRecords || this.monitorRecords.length === 0) {
+        return { xAxis: [], doValues: [], phValues: [] };
+      }
 
-      const pulseMap = {
-        '24h': [
-          [0.00, 0.05, -0.03, 0.02, -0.04, 0.03, -0.02, 0.05, -0.03, 0.04, 0.02, -0.01, 0.00],
-          [0.00, -0.03, 0.02, -0.04, 0.03, -0.05, 0.04, -0.02, 0.03, -0.02, 0.01, 0.02, 0.00],
-          [0.00, 0.02, 0.00, -0.03, 0.01, 0.04, -0.03, 0.02, 0.01, 0.03, -0.02, 0.01, 0.00],
-        ],
-        '7d': [
-          [0.00, 0.04, -0.03, 0.02, -0.04, 0.03, 0.00],
-          [0.00, -0.02, 0.03, -0.04, 0.02, -0.03, 0.01],
-          [0.00, 0.01, -0.01, 0.03, -0.02, 0.02, 0.00],
-        ],
-        '30d': [
-          [0.00, 0.03, -0.02, 0.04, -0.03, 0.02],
-          [0.00, -0.02, 0.03, -0.03, 0.02, -0.01],
-          [0.00, 0.01, -0.01, 0.02, -0.02, 0.01],
-        ],
-      };
+      // 基于实际监测记录生成趋势数据
+      const records = this.monitorRecords.filter(r => r.pondId === this.activePondId);
+      const xAxis = records.map(r => r.time || '');
+      const doValues = records.map(r => {
+        const val = Number(String(r.valueText || r.value || '').replace(/[^\d.\-]/g, ''));
+        return isNaN(val) ? 0 : val;
+      });
+      const phValues = records.map(r => {
+        const val = Number(String(r.valueText || r.value || '').replace(/[^\d.\-]/g, ''));
+        return isNaN(val) ? 0 : val;
+      });
 
-      const base = baseMap[this.trendRange] || baseMap['24h'];
-      const pulseList = pulseMap[this.trendRange] || pulseMap['24h'];
-      const pulse = pulseList[this.chartRefreshTick % pulseList.length] || [];
-
-      const pondOffsetMap = {
-        'pond-1': { doOffset: 0.18, phOffset: -0.03 },
-        'pond-2': { doOffset: 0.0, phOffset: 0.0 },
-        'pond-3': { doOffset: -0.12, phOffset: 0.04 },
-      };
-      const pondOffset = pondOffsetMap[this.activePondId] || pondOffsetMap['pond-2'];
-
-      return {
-        xAxis: base.xAxis,
-        doValues: base.doBase.map((value, index) => Number((value + (pulse[index] || 0) + pondOffset.doOffset).toFixed(2))),
-        phValues: base.phBase.map((value, index) => Number((value + (pulse[index] || 0) * 0.08 + pondOffset.phOffset).toFixed(2))),
-      };
+      return { xAxis, doValues, phValues };
     },
     summaryCards() {
       if (this.userType === 'monitor') {
@@ -1967,7 +1717,7 @@ export default {
         return false;
       }
 
-      const passwordCandidates = [localStorage.getItem('platformUserPassword'), '123456'].filter(Boolean);
+      const passwordCandidates = [localStorage.getItem('platformUserPassword')].filter(Boolean);
 
       this.loading = true;
       try {
@@ -2417,61 +2167,14 @@ export default {
     },
     normalizeImageUrl(url) {
       if (!url) {
-        return MOCK_PERMIT_IMAGE;
+        return '';
       }
       if (String(url).startsWith('http') || String(url).startsWith('data:')) {
         return url;
       }
       return `${this.$API_BASE_URL}${url}`;
     },
-    getMockPermissionRecords() {
-      return [
-        { id: 101, companyName: '蓝海一号养殖场', permitImage: MOCK_PERMIT_IMAGE, imageUrl: MOCK_PERMIT_IMAGE, status: 0, createTime: '2026-04-06 09:12:00' },
-        { id: 102, companyName: '滨海虾贝联合社', permitImage: MOCK_PERMIT_IMAGE, imageUrl: MOCK_PERMIT_IMAGE, status: 1, createTime: '2026-04-05 17:36:00' },
-        { id: 103, companyName: '澄海生态养殖合作社', permitImage: MOCK_PERMIT_IMAGE, imageUrl: MOCK_PERMIT_IMAGE, status: 2, createTime: '2026-04-05 14:18:00' },
-        { id: 104, companyName: '南堤智慧工厂化基地', permitImage: MOCK_PERMIT_IMAGE, imageUrl: MOCK_PERMIT_IMAGE, status: 1, createTime: '2026-04-05 16:22:00' },
-      ];
-    },
-    getMockWaterRows(type = 'turbidity') {
-      return this.regulatorPondSnapshots.map((item, index) => {
-        if (type === 'turbidity') {
-          const value = [18, 22, 16, 27, 21, 15][index] || 18;
-          return {
-            id: 301 + index,
-            userId: this.regulatorFarmerProfiles.find((profile) => profile.companyName === item.companyName)?.accountId || `COMP-${1001 + index}`,
-            companyName: item.companyName,
-            regionCode: item.regionCode,
-            region: item.region,
-            pondName: item.pondName,
-            data: `${value} NTU`,
-            time: `2026-04-06 ${String(10 - Math.floor(index / 2)).padStart(2, '0')}:${index % 2 === 0 ? '12' : '48'}:00`,
-            status: value <= 20 ? '正常' : '异常',
-            onChain: index % 2 === 0,
-          };
-        }
-
-        const value = [32650, 38200, 33480, 29800, 34120, 33680][index] || 32650;
-        return {
-          id: 401 + index,
-          userId: this.regulatorFarmerProfiles.find((profile) => profile.companyName === item.companyName)?.accountId || `COMP-${1001 + index}`,
-          companyName: item.companyName,
-          regionCode: item.regionCode,
-          region: item.region,
-          pondName: item.pondName,
-          data: `${value} mg/L`,
-          time: `2026-04-06 ${String(10 - Math.floor(index / 2)).padStart(2, '0')}:${index % 2 === 0 ? '10' : '45'}:00`,
-          status: value >= 30000 && value <= 38000 ? '正常' : '异常',
-          onChain: index % 2 === 0,
-        };
-      });
-    },
-    applyMockPermissionList() {
-      const list = this.getMockPermissionRecords();
-      if (this.userType === 'enterprise') {
-        this.enterpriseTableData = list.slice(0, 2);
-      } else {
-        this.monitorTableData = list;
-      }
+    enrichWaterRows(rows, type = 'turbidity') {
     },
     enrichWaterRows(rows, type = 'turbidity') {
       return (rows || []).map((row, index) => {
@@ -2486,27 +2189,17 @@ export default {
 
         return {
           ...row,
-          userId: row.userId || profile.accountId || `COMP-${1001 + index}`,
-          companyName: row.companyName || profile.companyName || `养殖主体-${index + 1}`,
-          regionCode: row.regionCode || profile.regionCode || snapshot.regionCode || 'east',
-          region: row.region || profile.region || snapshot.region || '默认片区',
-          pondName: row.pondName || snapshot.pondName || `${profile.companyName || '养殖主体'}-示范池`,
+          userId: row.userId || '',
+          companyName: row.companyName || '',
+          regionCode: row.regionCode || '',
+          region: row.region || '',
+          pondName: row.pondName || '',
           data: valueText,
-          time: row.time || row.createTime || this.formatNow(),
+          time: row.time || row.createTime || '',
           status: row.status || derivedStatus,
-          onChain: Boolean(row.onChain),
+          isOnChain: Boolean(row.isOnChain),
         };
       });
-    },
-    applyMockWaterData(type) {
-      const rows = this.getMockWaterRows(type);
-      if (type === 'turbidity') {
-        this.turbidityTableData = rows;
-        this.turbidityPagination.total = rows.length;
-        return;
-      }
-      this.tdsTableData = rows;
-      this.tdsPagination.total = rows.length;
     },
     getMetricSuggestion(metricCode, level) {
       if (level === 'danger') {
@@ -2644,7 +2337,7 @@ export default {
           const list = response.data.map((item, index) => ({
             ...item,
             id: item.id || index + 1,
-            companyName: item.companyName || `养殖主体-${index + 1}`,
+            companyName: item.companyName || '',
             status: Number(item.status ?? 0),
             permitImage: this.normalizeImageUrl(item.imageUrl || item.permitImage),
           }));
@@ -2656,10 +2349,12 @@ export default {
           return;
         }
 
-        this.applyMockPermissionList();
+        this.enterpriseTableData = [];
+        this.monitorTableData = [];
       } catch (error) {
-        console.error('获取许可证列表失败，已切换为演示数据:', error);
-        this.applyMockPermissionList();
+        console.error('获取许可证列表失败:', error);
+        this.enterpriseTableData = [];
+        this.monitorTableData = [];
       }
     },
     async handleApprove(row) {
@@ -2773,23 +2468,23 @@ export default {
       };
     },
     onTurbiditySelectChange(selectedRowKeys, selectedRows) {
-      this.selectedTurbidityRowKeys = selectedRows.selectedRowData.filter((item) => item && !item.onChain).map((item) => item.id);
+      this.selectedTurbidityRowKeys = selectedRows.selectedRowData.filter((item) => item && !item.isOnChain).map((item) => item.id);
     },
     onTdsSelectChange(selectedRowKeys, selectedRows) {
-      this.selectedTdsRowKeys = selectedRows.selectedRowData.filter((item) => item && !item.onChain).map((item) => item.id);
+      this.selectedTdsRowKeys = selectedRows.selectedRowData.filter((item) => item && !item.isOnChain).map((item) => item.id);
     },
     setDefaultAccountInfo() {
       const platformRole = localStorage.getItem('platformUserRole') || '';
       const platformAccount = localStorage.getItem('platformUserAccount') || '';
-      const platformPassword = localStorage.getItem('platformUserPassword') || '123456';
+      const platformPassword = localStorage.getItem('platformUserPassword') || '';
 
-      this.enterpriseAccount = this.enterpriseAccount || (platformRole === 'farmers' ? (platformAccount || 'farmer_demo') : 'farmer_demo');
+      this.enterpriseAccount = this.enterpriseAccount || (platformRole === 'farmers' ? platformAccount : '');
       this.enterprisePassword = this.enterprisePassword || platformPassword;
-      this.enterpriseBlockchainAddress = this.enterpriseBlockchainAddress || '0xFARMER-DEMO-001';
+      this.enterpriseBlockchainAddress = this.enterpriseBlockchainAddress || '';
 
-      this.monitorAccount = this.monitorAccount || (platformRole === 'manager' ? (platformAccount || 'manager_demo') : 'manager_demo');
+      this.monitorAccount = this.monitorAccount || (platformRole === 'manager' ? platformAccount : '');
       this.monitorPassword = this.monitorPassword || platformPassword;
-      this.monitorBlockchainAddress = this.monitorBlockchainAddress || '0xMANAGER-DEMO-001';
+      this.monitorBlockchainAddress = this.monitorBlockchainAddress || '';
     },
     async getAccountInfo() {
       try {
@@ -2835,10 +2530,12 @@ export default {
           this.turbidityPagination.total = Number(response.total || response.data.length);
           return;
         }
-        this.applyMockWaterData('turbidity');
+        this.turbidityTableData = [];
+        this.turbidityPagination.total = 0;
       } catch (error) {
-        console.error('获取浑浊度数据失败，已切换为演示数据:', error);
-        this.applyMockWaterData('turbidity');
+        console.error('获取浑浊度数据失败:', error);
+        this.turbidityTableData = [];
+        this.turbidityPagination.total = 0;
       }
     },
     async fetchTdsData() {
@@ -2853,14 +2550,16 @@ export default {
           this.tdsPagination.total = Number(response.total || response.data.length);
           return;
         }
-        this.applyMockWaterData('tds');
+        this.tdsTableData = [];
+        this.tdsPagination.total = 0;
       } catch (error) {
-        console.error('获取 TDS 数据失败，已切换为演示数据:', error);
-        this.applyMockWaterData('tds');
+        console.error('获取TDS数据失败:', error);
+        this.tdsTableData = [];
+        this.tdsPagination.total = 0;
       }
     },
     isRowDisabled(row) {
-      return row.onChain === true;
+      return row.isOnChain === true;
     },
     async fetchPondList() {
       try {
@@ -2880,8 +2579,9 @@ export default {
             this.pondOptions = list.map(item => ({
               value: String(item.id),
               label: item.pondName || item.name || `养殖池${item.id}`,
-              species: item.species || item.fishType || '',
-              status: item.status || 'PENDING',
+              species: item.breedType || item.species || item.fishType || '',
+              status: item.auditStatus !== undefined ? (item.auditStatus === 1 ? 'APPROVED' : (item.auditStatus === 2 ? 'REJECTED' : 'PENDING')) : (item.status || 'PENDING'),
+              pondStatus: item.status,
               farmerId: item.farmerId ? String(item.farmerId) : null,
               farmerName: item.farmerName || item.userName || '',
               farmName: item.farmName || '',
@@ -2904,14 +2604,14 @@ export default {
             if (data.pondList) {
               this.regulatorPondSnapshots = data.pondList.map((item, index) => ({
                 id: item.id || index + 1,
-                regionCode: item.regionCode || 'east',
-                region: item.region || '默认片区',
-                companyName: item.farmerName || item.companyName || '养殖主体',
-                pondName: item.pondName || item.name,
-                doValue: item.doValue || 5.0,
-                phValue: item.phValue || 8.1,
-                salinity: item.salinity || 25,
-                score: item.score || 85,
+                regionCode: item.regionCode || '',
+                region: item.region || '',
+                companyName: item.farmerName || item.companyName || '',
+                pondName: item.pondName || item.name || '',
+                doValue: item.doValue || 0,
+                phValue: item.phValue || 0,
+                salinity: item.salinity || 0,
+                score: item.score || 0,
                 warningCount: item.warningCount || 0,
                 statusText: item.status === 'APPROVED' ? '运行稳定' : '待审核',
                 theme: item.status === 'APPROVED' ? 'success' : 'warning',
@@ -2922,31 +2622,31 @@ export default {
             if (data.farmerList) {
               this.regulatorFarmerProfiles = data.farmerList.map((item, index) => ({
                 id: item.id || index + 1,
-                accountId: item.userAccount || `COMP-${1001 + index}`,
-                regionCode: item.regionCode || 'east',
-                region: item.region || '默认片区',
-                companyName: item.userName || item.companyName || '养殖主体',
-                pondCount: item.pondCount || 1,
+                accountId: item.userAccount || '',
+                regionCode: item.regionCode || '',
+                region: item.region || '',
+                companyName: item.userName || item.companyName || '',
+                pondCount: item.pondCount || 0,
                 latestUpload: item.latestUpload || '--',
                 licenseStatusText: item.licenseStatus === 'APPROVED' ? '许可证有效' : '待审批',
                 licenseTheme: item.licenseStatus === 'APPROVED' ? 'success' : 'warning',
-                chainRate: `${item.chainRate || 90}%`,
-                riskText: item.riskLevel || '低风险',
+                chainRate: item.chainRate ? `${item.chainRate}%` : '--',
+                riskText: item.riskLevel || '',
                 riskTheme: item.riskLevel === '高风险' ? 'danger' : (item.riskLevel === '中风险' ? 'warning' : 'success'),
               }));
             }
             if (data.warningList) {
               this.regulatorWarningItems = data.warningList.map((item, index) => ({
                 id: item.id || index + 1,
-                regionCode: item.regionCode || 'east',
-                region: item.region || '默认片区',
-                companyName: item.farmerName || '养殖主体',
+                regionCode: item.regionCode || '',
+                region: item.region || '',
+                companyName: item.farmerName || '',
                 pondName: item.pondName || '',
-                title: item.title || '预警事件',
-                levelText: item.level || '预警',
+                title: item.title || '',
+                levelText: item.level || '',
                 theme: item.level === '高风险' ? 'danger' : 'warning',
                 time: item.time || '--',
-                progress: item.progress || '待处理',
+                progress: item.progress || '',
                 detail: item.detail || '',
               }));
             }
@@ -2973,7 +2673,7 @@ export default {
                 title: item.title || '',
                 type: item.type || 'water_quality',
                 level: item.level || 'warning',
-                levelText: item.levelText || '预警',
+                levelText: item.levelText || '',
                 theme: item.level === 'danger' ? 'danger' : 'warning',
                 time: item.time || '--',
                 detail: item.detail || '',
@@ -3016,18 +2716,18 @@ export default {
           timeline.push({
             id: `seed-${item.id}`,
             pondId: String(item.pondId || ''),
-            pondName: item.pondName || '',
-            title: `苗种投放: ${item.category || ''}`,
-            time: item.date || item.createTime || '',
+            pondName: item.pondName || this.pondOptions.find(p => p.value === String(item.pondId))?.label || '',
+            title: `苗种投放: ${item.seedType || ''}`,
+            time: item.recordDate || item.createTime || '',
             evidenceNo: `BC-SEED-${item.id}`,
-            onChain: item.status === 'APPROVED',
-            ownerName: item.farmerName || '',
+            isOnChain: item.auditStatus === 1,
+            ownerName: item.farmerName || item.manager || '',
             contentTitle: '苗种投放记录',
             chainTime: item.chainTime || item.updateTime || '',
-            hash: item.txHash || '',
+            hash: item.txHash || item.chainTxHash || '',
             blockHeight: item.blockNumber || '--',
-            description: `投放${item.quantity || ''}，来源${item.source || ''}`,
-            verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
+            description: `投放${item.weight || ''}kg`,
+            verifyText: item.auditStatus === 1 ? '区块链存证验证通过' : '待上链确认',
           });
         });
 
@@ -3037,17 +2737,17 @@ export default {
             id: `feed-${item.id}`,
             pondId: String(item.pondId || ''),
             pondName: item.pondName || '',
-            title: `投喂记录: ${item.brand || ''}`,
-            time: `${item.date || ''} ${item.time || ''}`,
+            title: `投喂记录: ${item.feedBrand || ''}`,
+            time: item.feedDate || item.createTime || '',
             evidenceNo: `BC-FEED-${item.id}`,
-            onChain: item.status === 'APPROVED',
-            ownerName: item.farmerName || '',
+            isOnChain: item.auditStatus === 1,
+            ownerName: item.farmerName || item.manager || '',
             contentTitle: '投喂记录',
             chainTime: item.chainTime || item.updateTime || '',
-            hash: item.txHash || '',
+            hash: item.txHash || item.chainTxHash || '',
             blockHeight: item.blockNumber || '--',
-            description: `投喂${item.amount || ''}`,
-            verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
+            description: `投喂${item.feedAmount || ''}kg`,
+            verifyText: item.auditStatus === 1 ? '区块链存证验证通过' : '待上链确认',
           });
         });
 
@@ -3057,17 +2757,17 @@ export default {
             id: `medicine-${item.id}`,
             pondId: String(item.pondId || ''),
             pondName: item.pondName || '',
-            title: `用药记录: ${item.name || ''}`,
-            time: `${item.date || ''} ${item.time || ''}`,
+            title: `用药记录: ${item.medicineName || ''}`,
+            time: item.medicineDate || item.createTime || '',
             evidenceNo: `BC-MED-${item.id}`,
-            onChain: item.status === 'APPROVED',
-            ownerName: item.farmerName || '',
+            isOnChain: item.auditStatus === 1,
+            ownerName: item.farmerName || item.manager || '',
             contentTitle: '用药记录',
             chainTime: item.chainTime || item.updateTime || '',
-            hash: item.txHash || '',
+            hash: item.txHash || item.chainTxHash || '',
             blockHeight: item.blockNumber || '--',
-            description: `${item.name || ''} ${item.dosage || ''}`,
-            verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
+            description: `${item.medicineName || ''} ${item.dosage || ''}`,
+            verifyText: item.auditStatus === 1 ? '区块链存证验证通过' : '待上链确认',
           });
         });
 
@@ -3078,16 +2778,16 @@ export default {
             pondId: String(item.pondId || ''),
             pondName: item.pondName || '',
             title: `收获记录: ${item.batchNo || ''}`,
-            time: `${item.date || ''} ${item.time || ''}`,
+            time: item.harvestDate || item.createTime || '',
             evidenceNo: `BC-HARVEST-${item.id}`,
-            onChain: item.status === 'APPROVED',
-            ownerName: item.farmerName || '',
+            isOnChain: item.auditStatus === 1,
+            ownerName: item.farmerName || item.manager || '',
             contentTitle: '收获记录',
             chainTime: item.chainTime || item.updateTime || '',
-            hash: item.txHash || '',
+            hash: item.txHash || item.chainTxHash || '',
             blockHeight: item.blockNumber || '--',
-            description: `收获${item.weight || ''}，去向${item.destination || ''}`,
-            verifyText: item.status === 'APPROVED' ? '区块链存证验证通过' : '待上链确认',
+            description: `收获${item.totalWeight || ''}kg，去向${item.buyerInfo || ''}`,
+            verifyText: item.auditStatus === 1 ? '区块链存证验证通过' : '待上链确认',
           });
         });
 

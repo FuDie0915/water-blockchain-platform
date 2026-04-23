@@ -822,15 +822,15 @@ export default {
           }
         },
         {
-          colKey: 'onChain',
+          colKey: 'isOnChain',
           title: '是否上链',
           cell: (h, { row }) => {
             return h('t-tag', {
               props: {
-                theme: row.onChain === true ? 'success' : 'danger',
+                theme: row.isOnChain === true ? 'success' : 'danger',
                 variant: 'light'
               }
-            }, row.onChain === true ? '已上链' : '未上链');
+            }, row.isOnChain === true ? '已上链' : '未上链');
           }
         },
       ],
@@ -875,15 +875,15 @@ export default {
           }
         },
         {
-          colKey: 'onChain',
+          colKey: 'isOnChain',
           title: '是否上链',
           cell: (h, { row }) => {
             return h('t-tag', {
               props: {
-                theme: row.onChain === true ? 'success' : 'danger',
+                theme: row.isOnChain === true ? 'success' : 'danger',
                 variant: 'light'
               }
-            }, row.onChain === true ? '已上链' : '未上链');
+            }, row.isOnChain === true ? '已上链' : '未上链');
           }
         }
       ],
@@ -1290,7 +1290,7 @@ export default {
     onTurbiditySelectChange(selectedRowKeys, selectedRows) {
       console.log(selectedRows)
       this.selectedTurbidityRowKeys = selectedRows.selectedRowData
-        .filter(item => item && !item.onChain)  // 过滤掉已上链的数据
+        .filter(item => item && !item.isOnChain)  // 过滤掉已上链的数据
         .map(item => item.id);
       console.log(this.selectedTurbidityRowKeys, 'selectedTurbidityRowKeys');
     },
@@ -1299,7 +1299,7 @@ export default {
     onTdsSelectChange(selectedRowKeys, selectedRows) {
 
       this.selectedTdsRowKeys = selectedRows.selectedRowData
-        .filter(item => item && !item.onChain)  // 过滤掉已上链的数据
+        .filter(item => item && !item.isOnChain)  // 过滤掉已上链的数据
         .map(item => item.id);
     },
     // TDS数据选择事件
@@ -1396,7 +1396,7 @@ export default {
 
     // 判断行是否禁用
     isRowDisabled(row) {
-      return row.onChain === true;  // 如果已上链则禁用选择
+      return row.isOnChain === true;  // 如果已上链则禁用选择
     }
   },
   watch: {

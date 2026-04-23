@@ -34,10 +34,10 @@
             <t-col :xs="6" :xl="12">
               <t-card :bordered="false" subtitle="本月出库总计（件）" class="inner-card">
                 <div class="inner-card__content">
-                  <div class="inner-card__content-title">1726</div>
+                  <div class="inner-card__content-title">{{ outboundTotal || 0 }}</div>
                   <div class="inner-card__content-footer">
                     自从上周以来
-                    <trend class="trend-tag" type="down" :is-reverse-color="false" describe="20.3%" />
+                    <trend class="trend-tag" type="down" :is-reverse-color="false" :describe="outboundTrend || '--'" />
                   </div>
                 </div>
               </t-card>
@@ -45,10 +45,10 @@
             <t-col :xs="6" :xl="12">
               <t-card :bordered="false" subtitle="本月入库总计（件）" class="inner-card">
                 <div class="inner-card__content">
-                  <div class="inner-card__content-title">226</div>
+                  <div class="inner-card__content-title">{{ inboundTotal || 0 }}</div>
                   <div class="inner-card__content-footer">
                     自从上周以来
-                    <trend class="trend-tag" type="down" :is-reverse-color="false" describe="20.3%" />
+                    <trend class="trend-tag" type="down" :is-reverse-color="false" :describe="outboundTrend || '--'" />
                   </div>
                 </div>
               </t-card>
@@ -88,6 +88,10 @@ export default {
       saleColumns: SALE_COLUMNS,
       buyColumns: BUY_COLUMNS,
       LAST_7_DAYS,
+      outboundTotal: 0,
+      inboundTotal: 0,
+      outboundTrend: '',
+      inboundTrend: '',
     };
   },
   computed: {

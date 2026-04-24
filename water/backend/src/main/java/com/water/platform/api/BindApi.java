@@ -51,7 +51,7 @@ public class BindApi {
     @GetMapping("/manager/list")
     @ApiOperation("监管局查看所有绑定申请")
     @AuthCheck(roleType = UserRole.MANAGER)
-    public BaseResponse<List<ManagerFarmer>> managerList() {
+    public BaseResponse<List<com.water.platform.model.dto.resp.BindingResp>> managerList() {
         return managerFarmerService.managerList();
     }
 

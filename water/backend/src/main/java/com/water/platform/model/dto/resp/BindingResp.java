@@ -24,6 +24,9 @@ public class BindingResp {
     @ApiModelProperty(value = "养殖户名称")
     private String farmerName;
 
+    @ApiModelProperty(value = "养殖户账号")
+    private String farmerAccount;
+
     @ApiModelProperty(value = "状态（0=待审核, 1=已通过, 2=已拒绝）")
     private Integer status;
 

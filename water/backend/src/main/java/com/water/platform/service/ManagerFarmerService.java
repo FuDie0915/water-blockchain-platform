@@ -96,12 +96,31 @@ public class ManagerFarmerService {
     /**
      * 监管局查看所有绑定申请
      */
-    public BaseResponse<List<ManagerFarmer>> managerList() {
+    public BaseResponse<List<com.water.platform.model.dto.resp.BindingResp>> managerList() {
         Long managerId = TokenUtil.getLoginUserId();
         List<ManagerFarmer> list = managerFarmerMapper.selectList(new LambdaQueryWrapper<ManagerFarmer>()
                 .eq(ManagerFarmer::getManagerId, managerId)
                 .orderByDesc(ManagerFarmer::getId));
-        return ResultUtils.success(list);
+        List<com.water.platform.model.dto.resp.BindingResp> resps = list.stream().map(mf -> {
+            com.water.platform.model.dto.resp.BindingResp resp = new com.water.platform.model.dto.resp.BindingResp();
+            resp.setId(mf.getId());
+            resp.setManagerId(mf.getManagerId());
+            resp.setFarmerId(mf.getFarmerId());
+            resp.setStatus(mf.getStatus());
+            resp.setCreateTime(mf.getCreateTime());
+            resp.setUpdateTime(mf.getUpdateTime());
+            User farmer = userMapper.selectById(mf.getFarmerId());
+            if (farmer != null) {
+                resp.setFarmerName(farmer.getUserName());
+                resp.setFarmerAccount(farmer.getUserAccount());
+            }
+            User manager = userMapper.selectById(mf.getManagerId());
+            if (manager != null) {
+                resp.setManagerName(manager.getUserName());
+            }
+            return resp;
+        }).collect(java.util.stream.Collectors.toList());
+        return ResultUtils.success(resps);
     }
 
     /**

@@ -51,6 +51,9 @@ const mutations = {
     if (normalizedRole) {
       localStorage.setItem('platformUserRole', normalizedRole);
     }
+    if (resolvedUserInfo?.accountAddress) {
+      localStorage.setItem('platformAccountAddress', resolvedUserInfo.accountAddress);
+    }
   },
 };
 
@@ -71,6 +74,7 @@ const actions = {
           ...(data?.userResp || {}),
           userAccount: data?.userResp?.userAccount || userInfo.userAccount || '',
           userRole: role,
+          accountAddress: data?.userResp?.accountAddress || '',
         },
       };
 
@@ -83,6 +87,9 @@ const actions = {
       localStorage.setItem('platformUserAccount', userInfo.userAccount || '');
       localStorage.setItem('platformUserPassword', userInfo.userPassword || '');
       localStorage.setItem('platformUserRole', role);
+      if (data?.userResp?.accountAddress) {
+        localStorage.setItem('platformAccountAddress', data.userResp.accountAddress);
+      }
 
       if (role === 'farmers') {
         localStorage.setItem('farmertoken', normalizedData.token);
@@ -112,6 +119,7 @@ const actions = {
         userResp: {
           ...(data?.userResp || {}),
           userRole: role,
+          accountAddress: data?.userResp?.accountAddress || '',
         },
       };
       commit('setUserInfo', normalizedData);

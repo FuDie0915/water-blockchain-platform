@@ -1238,7 +1238,11 @@ export default {
       return this.userType === 'monitor' ? localStorage.getItem('managertoken') : localStorage.getItem('farmertoken');
     },
     currentChainAddress() {
-      return this.userType === 'monitor' ? this.monitorBlockchainAddress : this.enterpriseBlockchainAddress;
+      const storedAddress = localStorage.getItem('platformAccountAddress') || '';
+      if (this.userType === 'monitor') {
+        return this.monitorBlockchainAddress || storedAddress || '--';
+      }
+      return this.enterpriseBlockchainAddress || storedAddress || '--';
     },
     permitSource() {
       return this.userType === 'monitor' ? this.monitorTableData : this.enterpriseTableData;
@@ -1613,6 +1617,7 @@ export default {
         this.fetchPermissionList(),
         this.fetchPondList(),
         this.fetchDashboardData(),
+        this.getAccountInfo(),
       ]);
 
       if (userType === 'monitor') {
@@ -2488,16 +2493,17 @@ export default {
     },
     async getAccountInfo() {
       try {
-        const { data } = await getStepOneData();
-        this.enterpriseAccount = data.companyAccount || this.enterpriseAccount;
-        this.enterprisePassword = data.companyPassword || this.enterprisePassword;
-        this.enterpriseBlockchainAddress = data.companyAddress || this.enterpriseBlockchainAddress;
-        this.monitorAccount = data.managerAccount || this.monitorAccount;
-        this.monitorPassword = data.managerPassword || this.monitorPassword;
-        this.monitorBlockchainAddress = data.managerAddress || this.monitorBlockchainAddress;
+        const userInfo = this.$store.state.user?.userInfo || {};
+        const accountAddress = userInfo.accountAddress || localStorage.getItem('platformAccountAddress') || '';
+        if (accountAddress) {
+          if (this.userType === 'enterprise') {
+            this.enterpriseBlockchainAddress = accountAddress;
+          } else {
+            this.monitorBlockchainAddress = accountAddress;
+          }
+        }
       } catch (error) {
-        this.setDefaultAccountInfo();
-        console.warn('获取账号信息失败，已切换为本地演示账号信息:', error?.message || error);
+        console.warn('获取账号信息失败:', error?.message || error);
       }
     },
     onTurbidityPageChange(current) {

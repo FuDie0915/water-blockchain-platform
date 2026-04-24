@@ -49,7 +49,7 @@ public class PondService {
         Pond pond = new Pond();
         org.springframework.beans.BeanUtils.copyProperties(req, pond);
         pond.setUserId(userId);
-        pond.setAuditStatus(0);
+        pond.setAuditStatus(1);
         pond.setCreateTime(DateUtil.date());
         pond.setUpdateTime(DateUtil.date());
         pondMapper.insert(pond);
@@ -85,7 +85,7 @@ public class PondService {
         if (req.getNo2() != null) pond.setNo2(req.getNo2());
         // 如果养殖池已审核通过，修改后重置为待审核
         if (pond.getAuditStatus() != null && pond.getAuditStatus() == 1) {
-            pond.setAuditStatus(0);
+        pond.setAuditStatus(1);
         }
         pond.setUpdateTime(DateUtil.date());
         pondMapper.updateById(pond);

@@ -3,6 +3,7 @@ package com.water.platform.model.dto.req;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -30,10 +31,12 @@ public class PondCreateReq {
 
     @NotNull(message = "养殖周期开始时间不能为空")
     @ApiModelProperty(value = "养殖周期开始时间")
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
     private Date startDate;
 
     @NotNull(message = "养殖周期结束时间不能为空")
     @ApiModelProperty(value = "养殖周期结束时间")
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
     private Date endDate;
 
     @NotNull(message = "池塘状态不能为空")

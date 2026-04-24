@@ -825,6 +825,52 @@
         <t-tag :theme="bindStatusTheme" variant="light-outline">{{ bindStatusText }}</t-tag>
       </div>
     </t-dialog>
+
+    <t-dialog
+      :visible.sync="pondAddDialogVisible"
+      header="新增养殖池"
+      width="520px"
+      :confirm-btn="{ content: '创建', theme: 'primary', loading: pondAddSubmitting }"
+      :cancel-btn="{ content: '取消' }"
+      @confirm="handleCreatePond"
+      @cancel="resetPondAddForm"
+    >
+      <t-form :data="pondAddForm" layout="vertical">
+        <t-form-item label="塘名" required>
+          <t-input v-model="pondAddForm.pondName" placeholder="请输入塘名，如：一号塘" />
+        </t-form-item>
+        <t-form-item label="养殖品种" required>
+          <t-select v-model="pondAddForm.breedType" :options="breedTypeOptions" placeholder="请选择养殖品种" />
+        </t-form-item>
+        <t-row :gutter="16">
+          <t-col :span="6">
+            <t-form-item label="面积(亩)" required>
+              <t-input-number v-model="pondAddForm.area" :min="0" placeholder="请输入" />
+            </t-form-item>
+          </t-col>
+          <t-col :span="6">
+            <t-form-item label="水深(米)" required>
+              <t-input-number v-model="pondAddForm.depth" :min="0" :decimal-places="2" placeholder="请输入" />
+            </t-form-item>
+          </t-col>
+        </t-row>
+        <t-row :gutter="16">
+          <t-col :span="6">
+            <t-form-item label="养殖周期开始" required>
+              <t-date-picker v-model="pondAddForm.startDate" clearable />
+            </t-form-item>
+          </t-col>
+          <t-col :span="6">
+            <t-form-item label="养殖周期结束" required>
+              <t-date-picker v-model="pondAddForm.endDate" clearable />
+            </t-form-item>
+          </t-col>
+        </t-row>
+        <t-form-item label="池塘状态" required>
+          <t-select v-model="pondAddForm.status" :options="pondStatusOptions" />
+        </t-form-item>
+      </t-form>
+    </t-dialog>
   </div>
 </template>
 
@@ -843,7 +889,7 @@ import {
   Login,
   getThreshold,
 } from '@/api/water/water.js';
-import { getPondList, getManagerPondList } from '@/api/water/pond.js';
+import { getPondList, getManagerPondList, createPond } from '@/api/water/pond.js';
 import { getSeedList, getFeedList, getMedicineList, getHarvestList } from '@/api/water/farming-process.js';
 import { getManagerSeedList, getManagerFeedList, getManagerMedicineList, getManagerHarvestList } from '@/api/water/farming-process.js';
 import { getBindStatus, getManagerBindList, getManagerList, applyBind, unbind, managerApproveBind, managerRejectBind } from '@/api/water/bind.js';
@@ -927,6 +973,31 @@ export default {
       bindStatus: null,
       managerList: [],
       selectedManagerId: '',
+      // 新增养殖池相关
+      pondAddDialogVisible: false,
+      pondAddSubmitting: false,
+      pondAddForm: {
+        pondName: '',
+        breedType: '',
+        area: null,
+        depth: null,
+        startDate: '',
+        endDate: '',
+        status: 1,
+      },
+      breedTypeOptions: [
+        { label: '南美白对虾', value: '南美白对虾' },
+        { label: '斑节对虾', value: '斑节对虾' },
+        { label: '石斑鱼', value: '石斑鱼' },
+        { label: '鲈鱼', value: '鲈鱼' },
+        { label: '大黄鱼', value: '大黄鱼' },
+        { label: '其他', value: '其他' },
+      ],
+      pondStatusOptions: [
+        { label: '空闲', value: 0 },
+        { label: '养殖中', value: 1 },
+        { label: '休整', value: 2 },
+      ],
       bindApprovalList: [],
       bindApprovalColumns: [
         { colKey: 'id', title: '申请ID', width: 80 },
@@ -2351,7 +2422,58 @@ export default {
       return '指标处于正常范围，可继续保持当前养殖管理。';
     },
     showPondAddTip() {
-      this.$message.info('当前为前端展示版，新增养殖池入口样式已预留。');
+      this.pondAddDialogVisible = true;
+      this.resetPondAddForm();
+    },
+    resetPondAddForm() {
+      this.pondAddForm = {
+        pondName: '',
+        breedType: '',
+        area: null,
+        depth: null,
+        startDate: '',
+        endDate: '',
+        status: 1,
+      };
+    },
+    async handleCreatePond() {
+      const { pondName, breedType, area, depth, startDate, endDate, status } = this.pondAddForm;
+      if (!pondName || !breedType || area == null || depth == null || !startDate || !endDate) {
+        this.$message.warning('请填写完整信息');
+        return;
+      }
+      this.pondAddSubmitting = true;
+      try {
+        const formatDate = (date) => {
+          if (!date) return null;
+          const d = date instanceof Date ? date : new Date(date);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        const res = await createPond({
+          pondName,
+          breedType,
+          area,
+          depth,
+          startDate: formatDate(startDate),
+          endDate: formatDate(endDate),
+          status,
+        });
+        if (res.code === 0) {
+          this.$message.success('养殖池创建成功');
+          this.pondAddDialogVisible = false;
+          await this.fetchPondList();
+        } else {
+          this.$message.error(res.message || '创建失败');
+        }
+      } catch (error) {
+        console.error('创建养殖池失败:', error);
+        this.$message.error('创建失败');
+      } finally {
+        this.pondAddSubmitting = false;
+      }
     },
     showManualEntryDialog() {
       this.manualEntryDialogVisible = true;
@@ -2836,6 +2958,20 @@ export default {
               farmName: item.farmName || '',
             }));
             this.activePondId = this.pondOptions[0]?.value || 'pond-1';
+            // 为每个养殖池初始化默认水质指标数据（占位显示）
+            list.forEach(item => {
+              const pondId = String(item.id);
+              if (!this.pondMetricsMap[pondId]) {
+                this.pondMetricsMap[pondId] = [
+                  { metricCode: 'WATER_TEMP', value: item.waterTemp || '--', tip: '暂无数据' },
+                  { metricCode: 'SALINITY', value: item.salinity || '--', tip: '暂无数据' },
+                  { metricCode: 'PH', value: item.ph || '--', tip: '暂无数据' },
+                  { metricCode: 'DO', value: item.doValue || '--', tip: '暂无数据' },
+                  { metricCode: 'NH3N', value: item.nh3n || '--', tip: '暂无数据' },
+                  { metricCode: 'NO2', value: item.no2 || '--', tip: '暂无数据' },
+                ];
+              }
+            });
           }
         }
       } catch (error) {

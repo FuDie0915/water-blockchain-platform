@@ -888,6 +888,7 @@ import {
   approvePermissionByManager,
   Login,
   getThreshold,
+  manualReportWaterData,
 } from '@/api/water/water.js';
 import { getPondList, getManagerPondList, createPond } from '@/api/water/pond.js';
 import { getSeedList, getFeedList, getMedicineList, getHarvestList } from '@/api/water/farming-process.js';
@@ -903,6 +904,15 @@ import { ImageViewer as TImageViewer, Image as TImage } from 'tdesign-vue';
 import { WATER_DATA_TYPES, METRIC_LEVEL_THEME, getWaterMetricLevel } from '@/constants/water-thresholds.js';
 
 echarts.use([TooltipComponent, LegendComponent, GridComponent, LineChart, CanvasRenderer]);
+
+const METRIC_CODE_TO_DATA_TYPE = {
+  'WATER_TEMP': 2,
+  'SALINITY': 3,
+  'PH': 4,
+  'DO': 5,
+  'NH3N': 6,
+  'NO2': 7,
+};
 
 export default {
   name: 'WaterWorkbench',
@@ -2486,7 +2496,7 @@ export default {
         remark: '',
       };
     },
-    handleManualEntrySubmit() {
+    async handleManualEntrySubmit() {
       const { metricCode, value, remark } = this.manualEntryForm;
       const rule = WATER_DATA_TYPES.find((item) => item.metricCode === metricCode);
       const numericValue = Number(value);
@@ -2499,58 +2509,82 @@ export default {
         this.$message.warning('请输入有效的检测值');
         return;
       }
-
-      const level = getWaterMetricLevel(metricCode, numericValue);
-      const levelText = this.formatMetricLevel(level);
-      const suggestion = remark || this.getMetricSuggestion(metricCode, level);
-
-      this.monitorRecords.unshift({
-        id: Date.now(),
-        pondId: this.activePondId,
-        pondName: this.activePondLabel,
-        time: this.formatNow(),
-        metricCode,
-        metricLabel: rule.label,
-        valueText: `${numericValue} ${rule.unit}`.trim(),
-        sourceText: '人工补录',
-        levelText,
-        theme: METRIC_LEVEL_THEME[level] || 'primary',
-        suggestion,
-      });
-
-      const targetMetric = this.farmerMetrics.find((item) => item.metricCode === metricCode);
-      if (targetMetric) {
-        targetMetric.value = numericValue;
-        targetMetric.tip = suggestion;
+      if (!this.activePondId) {
+        this.$message.warning('请先选择养殖池');
+        return;
       }
 
-      if (level !== 'normal') {
-        this.warningTodoList.unshift({
-          id: Date.now() + 1,
-          pondId: this.activePondId,
-          pondName: this.activePondLabel,
-          title: `${rule.label}人工补录触发${levelText}`,
-          type: 'water_quality',
-          level,
-          levelText,
-          theme: METRIC_LEVEL_THEME[level] || 'warning',
-          time: '刚刚',
-          detail: `${rule.label}检测值为 ${numericValue}${rule.unit}，${suggestion}`,
+      const dataType = METRIC_CODE_TO_DATA_TYPE[metricCode];
+      if (!dataType) {
+        this.$message.warning('不支持的指标类型');
+        return;
+      }
+
+      try {
+        const res = await manualReportWaterData({
+          pondId: Number(this.activePondId),
+          dataType,
+          data: String(numericValue),
         });
+        if (res.code === 0) {
+          const level = getWaterMetricLevel(metricCode, numericValue);
+          const levelText = this.formatMetricLevel(level);
+          const suggestion = remark || this.getMetricSuggestion(metricCode, level);
+
+          this.monitorRecords.unshift({
+            id: Date.now(),
+            pondId: this.activePondId,
+            pondName: this.activePondLabel,
+            time: this.formatNow(),
+            metricCode,
+            metricLabel: rule.label,
+            valueText: `${numericValue} ${rule.unit}`.trim(),
+            sourceText: '人工补录',
+            levelText,
+            theme: METRIC_LEVEL_THEME[level] || 'primary',
+            suggestion,
+          });
+
+          const targetMetric = this.farmerMetrics.find((item) => item.metricCode === metricCode);
+          if (targetMetric) {
+            targetMetric.value = numericValue;
+            targetMetric.tip = suggestion;
+          }
+
+          if (level !== 'normal') {
+            this.warningTodoList.unshift({
+              id: Date.now() + 1,
+              pondId: this.activePondId,
+              pondName: this.activePondLabel,
+              title: `${rule.label}人工补录触发${levelText}`,
+              type: 'water_quality',
+              level,
+              levelText,
+              theme: METRIC_LEVEL_THEME[level] || 'warning',
+              time: '刚刚',
+              detail: `${rule.label}检测值为 ${numericValue}${rule.unit}，${suggestion}`,
+            });
+          }
+
+          this.traceabilityTimeline.unshift({
+            id: Date.now() + 2,
+            pondId: this.activePondId,
+            pondName: this.activePondLabel,
+            title: `${rule.label}补录记录已生成存证任务`,
+            time: '刚刚',
+            evidenceNo: `BC-MANUAL-${Date.now()}`,
+            isOnChain: level === 'normal',
+          });
+
+          this.$message.success(`已补录 ${rule.label} 数据，并写入数据库`);
+          this.resetManualEntryForm();
+        } else {
+          this.$message.error(res.message || '补录失败');
+        }
+      } catch (error) {
+        console.error('手动补录失败:', error);
+        this.$message.error('补录失败');
       }
-
-      this.traceabilityTimeline.unshift({
-        id: Date.now() + 2,
-        pondId: this.activePondId,
-        pondName: this.activePondLabel,
-        title: `${rule.label}补录记录已生成存证任务`,
-        time: '刚刚',
-        evidenceNo: `BC-MANUAL-${Date.now()}`,
-        onChain: level === 'normal',
-      });
-
-      this.$message.success(`已补录 ${rule.label} 数据，并完成阈值判定`);
-      this.resetManualEntryForm();
     },
     showApplyDialog() {
       this.dialogVisible = true;

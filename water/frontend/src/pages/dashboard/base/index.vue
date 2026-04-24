@@ -493,7 +493,37 @@ export default {
       ];
     },
     governanceFocusList() {
-      return [];
+      const totalNodes = this.boardData.nodeCount || 0;
+      const healthyRate = totalNodes > 0 ? this.healthyNodeCount / totalNodes : 0;
+      const pendingAudit = this.pendingManagerAuditCount;
+      const totalUsers = this.farmerAccounts.length + this.managerAccounts.length;
+
+      return [
+        {
+          title: '节点健康度',
+          description: `当前 ${this.healthyNodeCount}/${totalNodes} 个节点在线`,
+          status: healthyRate >= 0.8 ? '正常' : healthyRate >= 0.5 ? '预警' : '异常',
+          theme: healthyRate >= 0.8 ? 'success' : healthyRate >= 0.5 ? 'warning' : 'danger',
+        },
+        {
+          title: '监管局审批',
+          description: `待审批监管局资质申请 ${pendingAudit} 项`,
+          status: pendingAudit === 0 ? '无待办' : pendingAudit <= 3 ? '少量' : '积压',
+          theme: pendingAudit === 0 ? 'success' : pendingAudit <= 3 ? 'warning' : 'danger',
+        },
+        {
+          title: '阈值配置',
+          description: '水质预警阈值规则配置状态',
+          status: this.thresholdData ? '已配置' : '待配置',
+          theme: this.thresholdData ? 'success' : 'warning',
+        },
+        {
+          title: '账号管理',
+          description: `养殖户 ${this.farmerAccounts.length} 户，监管端 ${this.managerAccounts.length} 个`,
+          status: totalUsers > 0 ? '已纳管' : '无账号',
+          theme: totalUsers > 0 ? 'primary' : 'default',
+        },
+      ];
     },
     thresholdRules() {
       if (!this.thresholdData) {

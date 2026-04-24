@@ -53,13 +53,7 @@ const getters = {
 const actions = {
   async initRoutes({ commit }, roles) {
     const normalizedRoles = Array.isArray(roles) ? roles.filter(Boolean) : [roles].filter(Boolean);
-    let accessedRouters;
-
-    if (normalizedRoles.includes('admin')) {
-      accessedRouters = asyncRouterList.map((route) => cloneRoute(route));
-    } else {
-      accessedRouters = filterPermissionsRouters(asyncRouterList, normalizedRoles);
-    }
+    const accessedRouters = filterPermissionsRouters(asyncRouterList, normalizedRoles);
 
     commit('setRouters', accessedRouters);
 

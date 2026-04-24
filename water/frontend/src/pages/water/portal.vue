@@ -41,7 +41,7 @@
     </section>
 
     <t-row :gutter="[16, 16]" class="role-row">
-      <t-col v-for="panel in rolePanels" :key="panel.title" :xs="12" :lg="4">
+      <t-col v-for="panel in rolePanels" :key="panel.title" :xs="12" :lg="12">
         <t-card :title="panel.title" :bordered="false" class="role-card">
           <div class="role-card__body">
             <div>
@@ -88,20 +88,6 @@ export default {
           path: '/dashboard/base',
           buttonText: '进入系统管理端',
           features: ['权限管理', '阈值配置', '节点与备份监控'],
-        },
-        {
-          title: '养殖户端',
-          description: '面向养殖主体，查看水质指标、预警消息、许可证与存证记录。',
-          path: '/water/enterprise-login',
-          buttonText: '进入养殖户端',
-          features: ['6项核心水质指标', '全过程台账', '我的链上存证'],
-        },
-        {
-          title: '监管端',
-          description: '用于处理许可证审批、异常预警、数据审查与链上核验。',
-          path: '/water/monitor-login',
-          buttonText: '进入监管端',
-          features: ['审批处置', '异常复核', '监管留痕'],
         },
       ],
       workflows: [

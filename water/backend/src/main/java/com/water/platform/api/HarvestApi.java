@@ -42,8 +42,8 @@ public class HarvestApi {
     @ApiOperation("收获记录列表")
     @AuthCheck(roleType = UserRole.FARMERS)
     public PageResponse<HarvestRecord> list(@RequestParam(required = false) Long pondId,
-                                            @RequestParam Long pageNum,
-                                            @RequestParam Long pageSize) {
+                                            @RequestParam(defaultValue = "1") Long pageNum,
+                                            @RequestParam(defaultValue = "10") Long pageSize) {
         return harvestRecordService.list(pondId, pageNum, pageSize);
     }
 

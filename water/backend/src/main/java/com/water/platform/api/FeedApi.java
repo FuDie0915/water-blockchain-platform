@@ -42,8 +42,8 @@ public class FeedApi {
     @ApiOperation("投喂记录列表")
     @AuthCheck(roleType = UserRole.FARMERS)
     public PageResponse<FeedRecord> list(@RequestParam(required = false) Long pondId,
-                                         @RequestParam Long pageNum,
-                                         @RequestParam Long pageSize) {
+                                         @RequestParam(defaultValue = "1") Long pageNum,
+                                         @RequestParam(defaultValue = "10") Long pageSize) {
         return feedRecordService.list(pondId, pageNum, pageSize);
     }
 

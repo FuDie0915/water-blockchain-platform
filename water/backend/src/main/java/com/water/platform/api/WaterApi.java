@@ -125,7 +125,7 @@ public class WaterApi {
 
     @GetMapping("/data/page")
     @ApiOperation("水数据分页查询")
-    public PageResponse<WaterDataResp> page(@RequestParam Integer DataType, @RequestParam Long pageNum, @RequestParam Long pageSize) {
+    public PageResponse<WaterDataResp> page(@RequestParam Integer DataType, @RequestParam(defaultValue = "1") Long pageNum, @RequestParam(defaultValue = "10") Long pageSize) {
         return waterService.page(DataType, pageNum, pageSize);
     }
 

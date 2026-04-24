@@ -2563,7 +2563,7 @@ export default {
     },
     async fetchPondList() {
       try {
-        const res = this.userType === 'monitor' ? await getManagerPondList() : await getPondList();
+        const res = this.userType === 'monitor' ? await getManagerPondList({ pageNum: 1, pageSize: 100 }) : await getPondList();
         if (res.code === 0 && res.data) {
           // 养殖户接口返回 List<Pond>，监管局接口返回 PageResponse<Pond>
           let list;
@@ -2687,7 +2687,7 @@ export default {
     },
     async fetchFarmingProcessData() {
       try {
-        const pondId = this.activePondId !== 'all' ? { pondId: this.activePondId } : {};
+        const pondId = this.activePondId !== 'all' ? { pondId: this.activePondId, pageNum: 1, pageSize: 100 } : { pageNum: 1, pageSize: 100 };
 
         // 获取养殖过程数据用于存证时间线
         const [seedRes, feedRes, medicineRes, harvestRes] = await Promise.all([

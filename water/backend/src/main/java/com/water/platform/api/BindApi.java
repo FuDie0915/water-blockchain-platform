@@ -76,8 +76,8 @@ public class BindApi {
             @RequestParam(required = false) Long managerId,
             @RequestParam(required = false) Long farmerId,
             @RequestParam(required = false) Integer status,
-            @RequestParam Long pageNum,
-            @RequestParam Long pageSize) {
+            @RequestParam(defaultValue = "1") Long pageNum,
+            @RequestParam(defaultValue = "10") Long pageSize) {
         return managerFarmerService.adminList(managerId, farmerId, status, pageNum, pageSize);
     }
 

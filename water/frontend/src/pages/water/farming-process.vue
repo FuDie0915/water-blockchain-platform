@@ -601,7 +601,7 @@ export default {
     async loadPonds() {
       this.loadingPonds = true;
       try {
-        const res = this.isMonitorView ? await getManagerPondList() : await getPondList();
+        const res = this.isMonitorView ? await getManagerPondList({ pageNum: 1, pageSize: 100 }) : await getPondList();
         if (res.code === 0 && res.data) {
           // 养殖户接口返回 List<Pond>，监管局接口返回 PageResponse<Pond>
           let list;
@@ -637,7 +637,7 @@ export default {
     async loadAllData() {
       this.loadingData = true;
       try {
-        const params = this.selectedPond !== 'all' ? { pondId: this.selectedPond } : {};
+        const params = this.selectedPond !== 'all' ? { pondId: this.selectedPond, pageNum: 1, pageSize: 100 } : { pageNum: 1, pageSize: 100 };
 
         const [seedRes, feedRes, medicineRes, harvestRes] = await Promise.all([
           this.isMonitorView ? getManagerSeedList(params) : getSeedList(params),
@@ -658,7 +658,7 @@ export default {
     },
     async loadCurrentTabData() {
       this.loadingData = true;
-      const params = this.selectedPond !== 'all' ? { pondId: this.selectedPond } : {};
+      const params = this.selectedPond !== 'all' ? { pondId: this.selectedPond, pageNum: 1, pageSize: 100 } : { pageNum: 1, pageSize: 100 };
 
       try {
         let res;

@@ -75,8 +75,8 @@ public class PondApi {
     @AuthCheck(roleType = UserRole.MANAGER)
     public BaseResponse<PageResponse<Pond>> managerList(@RequestParam(required = false) Long farmerId,
                                                         @RequestParam(required = false) Integer auditStatus,
-                                                        @RequestParam Long pageNum,
-                                                        @RequestParam Long pageSize) {
+                                                        @RequestParam(defaultValue = "1") Long pageNum,
+                                                        @RequestParam(defaultValue = "10") Long pageSize) {
         return pondService.managerList(farmerId, auditStatus, pageNum, pageSize);
     }
 

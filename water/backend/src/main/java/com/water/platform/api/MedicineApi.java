@@ -42,8 +42,8 @@ public class MedicineApi {
     @ApiOperation("用药记录列表")
     @AuthCheck(roleType = UserRole.FARMERS)
     public PageResponse<MedicineRecord> list(@RequestParam(required = false) Long pondId,
-                                             @RequestParam Long pageNum,
-                                             @RequestParam Long pageSize) {
+                                             @RequestParam(defaultValue = "1") Long pageNum,
+                                             @RequestParam(defaultValue = "10") Long pageSize) {
         return medicineRecordService.list(pondId, pageNum, pageSize);
     }
 

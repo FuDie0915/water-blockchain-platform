@@ -43,8 +43,8 @@ public class ManagerAuditApi {
     @AuthCheck(roleType = UserRole.ADMIN)
     public BaseResponse<PageResponse<ManagerAudit>> adminList(
             @RequestParam(required = false) Integer status,
-            @RequestParam Long pageNum,
-            @RequestParam Long pageSize) {
+            @RequestParam(defaultValue = "1") Long pageNum,
+            @RequestParam(defaultValue = "10") Long pageSize) {
         return managerAuditService.adminList(status, pageNum, pageSize);
     }
 

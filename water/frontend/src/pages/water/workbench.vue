@@ -14,6 +14,7 @@
                 <t-button :theme="farmerView === 'monitor' ? 'primary' : 'default'" :variant="farmerView === 'monitor' ? 'base' : 'outline'" @click="switchFarmerView('monitor')">水质监测</t-button>
                 <t-button :theme="farmerView === 'warning' ? 'warning' : 'default'" :variant="farmerView === 'warning' ? 'base' : 'outline'" @click="switchFarmerView('warning')">预警中心</t-button>
                 <t-button variant="outline" :loading="farmingProcessLoading" @click="openFarmingProcess">养殖过程管理</t-button>
+                <t-button variant="outline" @click="showBindDialog">绑定监管局</t-button>
               </template>
               <template v-else>
                 <!-- 监管局审核状态提示 -->
@@ -32,6 +33,7 @@
                 <t-button v-if="managerAuditStatus === null || managerAuditStatus === 2" theme="warning" variant="outline" @click="showManagerAuditDialog">提交资质审核</t-button>
                 <t-button :theme="currentView === 'dashboard' ? 'primary' : 'default'" :variant="currentView === 'dashboard' ? 'base' : 'outline'" @click="switchRegulatorView('dashboard')">监管总览</t-button>
                 <t-button :theme="currentView === 'approval' ? 'primary' : 'default'" :variant="currentView === 'approval' ? 'base' : 'outline'" @click="switchRegulatorView('approval')">许可审批</t-button>
+                <t-button :theme="currentView === 'bindApproval' ? 'primary' : 'default'" :variant="currentView === 'bindApproval' ? 'base' : 'outline'" @click="switchRegulatorView('bindApproval')">绑定审批</t-button>
                 <t-button :theme="currentView === 'waterData' ? 'primary' : 'default'" :variant="currentView === 'waterData' ? 'base' : 'outline'" @click="switchRegulatorView('waterData')">水数据审查</t-button>
                 <t-button variant="outline" :loading="farmingProcessLoading" @click="openFarmingProcess">养殖过程监管</t-button>
                 <t-button variant="outline" @click="showContractDialog">绑定智能合约</t-button>
@@ -62,6 +64,22 @@
             <div class="side-card chain-box">
               <div class="side-card__title">链上账户地址</div>
               <div class="chain-address">{{ currentChainAddress || '--' }}</div>
+            </div>
+
+            <div v-if="userType === 'enterprise'" class="side-card bind-status-box">
+              <div class="side-card__title">监管局绑定</div>
+              <div class="side-row">
+                <span>绑定状态</span>
+                <t-tag :theme="bindStatusTheme" variant="light-outline">{{ bindStatusText }}</t-tag>
+              </div>
+              <div v-if="bindStatus && bindStatus.managerName" class="side-row">
+                <span>监管局</span>
+                <strong>{{ bindStatus.managerName }}</strong>
+              </div>
+              <div v-if="bindStatus && bindStatus.applyTime" class="side-row">
+                <span>申请时间</span>
+                <span>{{ bindStatus.applyTime }}</span>
+              </div>
             </div>
           </div>
         </section>
@@ -487,6 +505,7 @@
                     <t-button :variant="currentView === 'dashboard' ? 'base' : 'outline'" @click="switchRegulatorView('dashboard')">区域监测</t-button>
                     <t-button :variant="currentView === 'farmers' ? 'base' : 'outline'" @click="switchRegulatorView('farmers')">养殖主体</t-button>
                     <t-button :variant="currentView === 'approval' ? 'base' : 'outline'" @click="switchRegulatorView('approval')">许可审批</t-button>
+                    <t-button :variant="currentView === 'bindApproval' ? 'base' : 'outline'" @click="switchRegulatorView('bindApproval')">绑定审批</t-button>
                     <t-button :variant="currentView === 'waterData' ? 'base' : 'outline'" @click="switchRegulatorView('waterData')">水数据</t-button>
                     <t-button :variant="currentView === 'chain' ? 'base' : 'outline'" @click="switchRegulatorView('chain')">链上监管</t-button>
                   </t-button-group>
@@ -625,6 +644,18 @@
                       />
                     </div>
                   </div>
+                </template>
+
+                <template v-else-if="currentView === 'bindApproval'">
+                  <div class="panel-tip">审批养殖户的绑定申请，通过后养殖户可正常提交水质数据和许可证申请。</div>
+                  <t-table
+                    row-key="id"
+                    :data="bindApprovalList"
+                    :columns="bindApprovalColumns"
+                    bordered
+                    max-height="520"
+                    :empty="'暂无绑定申请'"
+                  />
                 </template>
 
                 <template v-else>
@@ -770,6 +801,27 @@
         </t-form-item>
       </t-form>
     </t-dialog>
+
+    <!-- 养殖户绑定监管局对话框 -->
+    <t-dialog
+      :visible.sync="bindDialogVisible"
+      header="绑定监管局"
+      width="500px"
+      :confirm-btn="{ content: '申请绑定', theme: 'primary', loading: bindSubmitting }"
+      @confirm="handleApplyBind"
+      @cancel="bindDialogVisible = false"
+    >
+      <div class="bind-dialog-tip">选择要绑定的监管局，提交申请后等待监管局审批通过。</div>
+      <t-form layout="vertical">
+        <t-form-item label="选择监管局" required>
+          <t-select v-model="selectedManagerId" :options="managerOptions" placeholder="请选择监管局" />
+        </t-form-item>
+      </t-form>
+      <div v-if="bindStatus && bindStatus.status !== undefined" class="bind-current-status">
+        <span>当前状态：</span>
+        <t-tag :theme="bindStatusTheme" variant="light-outline">{{ bindStatusText }}</t-tag>
+      </div>
+    </t-dialog>
   </div>
 </template>
 
@@ -866,6 +918,53 @@ export default {
         phone: '',
         remark: '',
       },
+      // 养殖户绑定监管局相关
+      bindDialogVisible: false,
+      bindSubmitting: false,
+      bindStatus: null,
+      managerList: [],
+      selectedManagerId: '',
+      bindApprovalList: [],
+      bindApprovalColumns: [
+        { colKey: 'id', title: '申请ID', width: 80 },
+        { colKey: 'farmerName', title: '养殖户', minWidth: 140 },
+        { colKey: 'farmerAccount', title: '养殖户账号', minWidth: 130 },
+        { colKey: 'applyTime', title: '申请时间', width: 160 },
+        {
+          colKey: 'status',
+          title: '状态',
+          width: 100,
+          cell: (h, { row }) => {
+            const statusMap = {
+              0: { theme: 'warning', text: '待审批' },
+              1: { theme: 'success', text: '已通过' },
+              2: { theme: 'danger', text: '已拒绝' },
+            };
+            const status = statusMap[row.status] || { theme: 'default', text: '未知' };
+            return h('t-tag', { props: { theme: status.theme, variant: 'light-outline' } }, status.text);
+          },
+        },
+        {
+          colKey: 'operation',
+          title: '操作',
+          width: 180,
+          cell: (h, { row }) => {
+            if (row.status !== 0) {
+              return h('span', { style: { color: '#6a7f95' } }, '--');
+            }
+            return h('div', { style: { display: 'flex', gap: '8px' } }, [
+              h('t-button', {
+                props: { theme: 'success', variant: 'text', size: 'small' },
+                on: { click: () => this.handleApproveBind(row) },
+              }, '通过'),
+              h('t-button', {
+                props: { theme: 'danger', variant: 'text', size: 'small' },
+                on: { click: () => this.handleRejectBind(row) },
+              }, '拒绝'),
+            ]);
+          },
+        },
+      ],
       waterTrendChart: null,
       regulatorRegionChart: null,
       chartRefreshTimer: null,
@@ -1243,6 +1342,28 @@ export default {
         return this.monitorBlockchainAddress || storedAddress || '--';
       }
       return this.enterpriseBlockchainAddress || storedAddress || '--';
+    },
+    bindStatusText() {
+      if (!this.bindStatus) return '未绑定';
+      const status = this.bindStatus.status;
+      if (status === 0) return '待审批';
+      if (status === 1) return '已绑定';
+      if (status === 2) return '已拒绝';
+      return '未绑定';
+    },
+    bindStatusTheme() {
+      if (!this.bindStatus) return 'default';
+      const status = this.bindStatus.status;
+      if (status === 0) return 'warning';
+      if (status === 1) return 'success';
+      if (status === 2) return 'danger';
+      return 'default';
+    },
+    managerOptions() {
+      return this.managerList.map((item) => ({
+        label: item.userName || item.userAccount,
+        value: item.userId,
+      }));
     },
     permitSource() {
       return this.userType === 'monitor' ? this.monitorTableData : this.enterpriseTableData;
@@ -2383,6 +2504,18 @@ export default {
       } catch (error) {
         console.error('reject failed', error);
       }
+    },
+    showBindDialog() {
+      this.bindDialogVisible = true;
+    },
+    handleApplyBind() {
+      this.$message.info('功能开发中，请稍后再试');
+    },
+    handleApproveBind(row) {
+      this.$message.info('功能开发中，请稍后再试');
+    },
+    handleRejectBind(row) {
+      this.$message.info('功能开发中，请稍后再试');
     },
     async handleCompare(row) {
       if (Number(row?.status) !== 1) {
@@ -3587,6 +3720,29 @@ export default {
 
 :deep(.t-dialog__body) {
   padding-top: 12px;
+}
+
+.bind-dialog-tip {
+  margin-bottom: 16px;
+  color: #5e738a;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.bind-current-status {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4f6780;
+}
+
+.bind-status-box {
+  margin-top: 12px;
 }
 
 @media (max-width: 1100px) {

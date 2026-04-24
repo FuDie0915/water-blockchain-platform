@@ -80,6 +80,9 @@
                 <span>申请时间</span>
                 <span>{{ bindStatus.applyTime }}</span>
               </div>
+              <div v-if="bindStatus && bindStatus.status === 1" class="side-row bind-action-row">
+                <t-button size="small" theme="warning" variant="outline" @click="handleUnbind">解除绑定</t-button>
+              </div>
             </div>
           </div>
         </section>
@@ -843,7 +846,7 @@ import {
 import { getPondList, getManagerPondList } from '@/api/water/pond.js';
 import { getSeedList, getFeedList, getMedicineList, getHarvestList } from '@/api/water/farming-process.js';
 import { getManagerSeedList, getManagerFeedList, getManagerMedicineList, getManagerHarvestList } from '@/api/water/farming-process.js';
-import { getBindStatus, getManagerBindList } from '@/api/water/bind.js';
+import { getBindStatus, getManagerBindList, getManagerList, applyBind, unbind, managerApproveBind, managerRejectBind } from '@/api/water/bind.js';
 import { getFarmerDashboard, getManagerDashboard } from '@/api/water/dashboard.js';
 import { getManagerAuditStatus, submitManagerAudit } from '@/api/water/managerAudit.js';
 import { TooltipComponent, LegendComponent, GridComponent } from 'echarts/components';
@@ -1733,6 +1736,11 @@ export default {
         await this.checkManagerAuditStatus();
       }
 
+      // 养殖户登录时检查绑定状态
+      if (userType === 'enterprise') {
+        await this.fetchBindStatus();
+      }
+
       // 加载基础数据
       await Promise.all([
         this.fetchPermissionList(),
@@ -2087,6 +2095,9 @@ export default {
         this.$nextTick(() => {
           this.queueRenderRegulatorChart();
         });
+      }
+      if (view === 'bindApproval') {
+        this.fetchBindApprovalList();
       }
     },
     startChartAutoRefresh() {
@@ -2507,15 +2518,114 @@ export default {
     },
     showBindDialog() {
       this.bindDialogVisible = true;
+      this.fetchManagerList();
     },
-    handleApplyBind() {
-      this.$message.info('功能开发中，请稍后再试');
+    async fetchManagerList() {
+      try {
+        const res = await getManagerList();
+        if (res.code === 0 && res.data) {
+          this.managerList = res.data;
+        }
+      } catch (error) {
+        console.error('获取监管局列表失败:', error);
+        this.$message.error('获取监管局列表失败');
+      }
     },
-    handleApproveBind(row) {
-      this.$message.info('功能开发中，请稍后再试');
+    async fetchBindStatus() {
+      try {
+        const res = await getBindStatus();
+        if (res.code === 0 && res.data) {
+          this.bindStatus = res.data;
+        } else {
+          this.bindStatus = null;
+        }
+      } catch (error) {
+        console.error('获取绑定状态失败:', error);
+        this.bindStatus = null;
+      }
     },
-    handleRejectBind(row) {
-      this.$message.info('功能开发中，请稍后再试');
+    async handleApplyBind() {
+      if (!this.selectedManagerId) {
+        this.$message.warning('请选择要绑定的监管局');
+        return;
+      }
+      this.bindSubmitting = true;
+      try {
+        const res = await applyBind({ managerId: this.selectedManagerId });
+        if (res.code === 0) {
+          this.$message.success('申请已提交，请等待监管局审批');
+          this.bindDialogVisible = false;
+          this.selectedManagerId = '';
+          await this.fetchBindStatus();
+        } else {
+          this.$message.error(res.message || '申请失败');
+        }
+      } catch (error) {
+        console.error('申请绑定失败:', error);
+        this.$message.error('申请失败');
+      } finally {
+        this.bindSubmitting = false;
+      }
+    },
+    async handleUnbind() {
+      try {
+        const res = await unbind();
+        if (res.code === 0) {
+          this.$message.success('已解除绑定');
+          this.bindStatus = null;
+        } else {
+          this.$message.error(res.message || '解绑失败');
+        }
+      } catch (error) {
+        console.error('解绑失败:', error);
+        this.$message.error('解绑失败');
+      }
+    },
+    async fetchBindApprovalList() {
+      try {
+        const res = await getManagerBindList();
+        if (res.code === 0 && res.data) {
+          this.bindApprovalList = res.data.map((item) => ({
+            ...item,
+            farmerName: item.farmerName || item.farmerAccount || '--',
+            farmerAccount: item.farmerAccount || '--',
+            applyTime: item.applyTime || item.createTime || '--',
+          }));
+        } else {
+          this.bindApprovalList = [];
+        }
+      } catch (error) {
+        console.error('获取绑定申请列表失败:', error);
+        this.bindApprovalList = [];
+      }
+    },
+    async handleApproveBind(row) {
+      try {
+        const res = await managerApproveBind(row.id);
+        if (res.code === 0) {
+          this.$message.success('已通过绑定申请');
+          await this.fetchBindApprovalList();
+        } else {
+          this.$message.error(res.message || '操作失败');
+        }
+      } catch (error) {
+        console.error('通过绑定失败:', error);
+        this.$message.error('操作失败');
+      }
+    },
+    async handleRejectBind(row) {
+      try {
+        const res = await managerRejectBind(row.id);
+        if (res.code === 0) {
+          this.$message.warning('已拒绝绑定申请');
+          await this.fetchBindApprovalList();
+        } else {
+          this.$message.error(res.message || '操作失败');
+        }
+      } catch (error) {
+        console.error('拒绝绑定失败:', error);
+        this.$message.error('操作失败');
+      }
     },
     async handleCompare(row) {
       if (Number(row?.status) !== 1) {
@@ -3743,6 +3853,11 @@ export default {
 
 .bind-status-box {
   margin-top: 12px;
+}
+
+.bind-action-row {
+  justify-content: flex-end;
+  padding-top: 8px;
 }
 
 @media (max-width: 1100px) {

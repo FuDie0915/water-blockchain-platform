@@ -12,6 +12,7 @@ function cloneRoute(route) {
 }
 
 function filterPermissionsRouters(routes, roles) {
+  const roleList = Array.isArray(roles) ? roles.filter(Boolean) : [roles].filter(Boolean);
   return (routes || []).reduce((res, route) => {
     const currentRoute = cloneRoute(route);
     const children = (currentRoute.children || []).filter((childRouter) => {
@@ -19,10 +20,10 @@ function filterPermissionsRouters(routes, roles) {
       const roleCode = childRouter.meta?.roleCode || childRouter.name;
 
       if (Array.isArray(allowedRoles) && allowedRoles.length > 0) {
-        return allowedRoles.some((role) => roles.includes(role));
+        return allowedRoles.some((role) => roleList.includes(role));
       }
 
-      return roles.includes(roleCode);
+      return roleList.includes(roleCode);
     });
 
     if (children.length > 0) {

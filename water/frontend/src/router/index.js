@@ -11,7 +11,7 @@ import seaRouters from './modules/sea';
 const env = import.meta.env.MODE || 'development';
 
 // 存放动态路由
-export const asyncRouterList = [ ...baseRouters, ...waterRouters];
+export const asyncRouterList = [ ...baseRouters, ...waterRouters, ...othersRouters];
 
 // 存放固定的路由
 const defaultRouterList = [

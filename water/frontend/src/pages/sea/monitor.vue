@@ -45,10 +45,13 @@
 </template>
 
 <script>
+import { Login } from '@/api/water/water';
+
 export default {
   name: 'MonitorLogin',
   data() {
     return {
+      loading: false,
       formData: {
         username: '',
         password: ''
@@ -60,13 +63,32 @@ export default {
     }
   },
   methods: {
-    onSubmit({ validateResult }) {
-      if (validateResult === true) {
-        const data = {}
-        data.userAccount = this.formData.username
-        data.userPassword = this.formData.password
-        data.userType = 'monitor'
-        this.$emit('login-success', data);
+    async onSubmit({ validateResult }) {
+      if (validateResult !== true) {
+        this.$message.error('请输入用户名和密码');
+        return;
+      }
+
+      this.loading = true;
+      try {
+        const loginData = {
+          userAccount: this.formData.username,
+          userPassword: this.formData.password,
+          loginType: 1
+        };
+        const response = await Login(loginData);
+        if (response.code === 0) {
+          localStorage.setItem('managertoken', response.data.token);
+          this.$message.success('登录成功');
+          this.$router.replace('/water/monitor-login');
+        } else {
+          this.$message.error(response.message || '登录失败');
+        }
+      } catch (error) {
+        console.error('登录失败:', error);
+        this.$message.error('登录失败');
+      } finally {
+        this.loading = false;
       }
     }
   }

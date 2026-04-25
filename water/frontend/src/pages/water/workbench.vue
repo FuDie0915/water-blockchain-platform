@@ -31,10 +31,6 @@
                   已拒绝
                 </t-tag>
                 <t-button v-if="managerAuditStatus === null || managerAuditStatus === 2" theme="warning" variant="outline" @click="showManagerAuditDialog">提交资质审核</t-button>
-                <t-button :theme="currentView === 'dashboard' ? 'primary' : 'default'" :variant="currentView === 'dashboard' ? 'base' : 'outline'" @click="switchRegulatorView('dashboard')">监管总览</t-button>
-                <t-button v-if="false" :theme="currentView === 'approval' ? 'primary' : 'default'" :variant="currentView === 'approval' ? 'base' : 'outline'" @click="switchRegulatorView('approval')">许可审批</t-button>
-                <t-button :theme="currentView === 'bindApproval' ? 'primary' : 'default'" :variant="currentView === 'bindApproval' ? 'base' : 'outline'" @click="switchRegulatorView('bindApproval')">绑定审批</t-button>
-                <t-button :theme="currentView === 'waterData' ? 'primary' : 'default'" :variant="currentView === 'waterData' ? 'base' : 'outline'" @click="switchRegulatorView('waterData')">水数据审查</t-button>
                 <t-button variant="outline" :loading="farmingProcessLoading" @click="openFarmingProcess">养殖过程监管</t-button>
                 <t-button variant="outline" @click="showContractDialog">绑定智能合约</t-button>
               </template>

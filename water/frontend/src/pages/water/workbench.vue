@@ -10,11 +10,11 @@
 
             <div class="hero-actions">
               <template v-if="userType === 'enterprise'">
-                <t-button theme="primary" :disabled="hasActivePermit" @click="showApplyDialog">提交许可证</t-button>
+                <t-button v-if="false" theme="primary" :disabled="hasActivePermit" @click="showApplyDialog">提交许可证</t-button>
                 <t-button :theme="farmerView === 'monitor' ? 'primary' : 'default'" :variant="farmerView === 'monitor' ? 'base' : 'outline'" @click="switchFarmerView('monitor')">水质监测</t-button>
                 <t-button :theme="farmerView === 'warning' ? 'warning' : 'default'" :variant="farmerView === 'warning' ? 'base' : 'outline'" @click="switchFarmerView('warning')">预警中心</t-button>
                 <t-button variant="outline" :loading="farmingProcessLoading" @click="openFarmingProcess">养殖过程管理</t-button>
-                <t-button variant="outline" @click="showBindDialog">绑定监管局</t-button>
+                <t-button variant="outline" :theme="isBound ? 'success' : 'default'" @click="showBindDialog">{{ bindButtonText }}</t-button>
               </template>
               <template v-else>
                 <!-- 监管局审核状态提示 -->
@@ -32,7 +32,7 @@
                 </t-tag>
                 <t-button v-if="managerAuditStatus === null || managerAuditStatus === 2" theme="warning" variant="outline" @click="showManagerAuditDialog">提交资质审核</t-button>
                 <t-button :theme="currentView === 'dashboard' ? 'primary' : 'default'" :variant="currentView === 'dashboard' ? 'base' : 'outline'" @click="switchRegulatorView('dashboard')">监管总览</t-button>
-                <t-button :theme="currentView === 'approval' ? 'primary' : 'default'" :variant="currentView === 'approval' ? 'base' : 'outline'" @click="switchRegulatorView('approval')">许可审批</t-button>
+                <t-button v-if="false" :theme="currentView === 'approval' ? 'primary' : 'default'" :variant="currentView === 'approval' ? 'base' : 'outline'" @click="switchRegulatorView('approval')">许可审批</t-button>
                 <t-button :theme="currentView === 'bindApproval' ? 'primary' : 'default'" :variant="currentView === 'bindApproval' ? 'base' : 'outline'" @click="switchRegulatorView('bindApproval')">绑定审批</t-button>
                 <t-button :theme="currentView === 'waterData' ? 'primary' : 'default'" :variant="currentView === 'waterData' ? 'base' : 'outline'" @click="switchRegulatorView('waterData')">水数据审查</t-button>
                 <t-button variant="outline" :loading="farmingProcessLoading" @click="openFarmingProcess">养殖过程监管</t-button>
@@ -507,7 +507,7 @@
                   <t-button-group>
                     <t-button :variant="currentView === 'dashboard' ? 'base' : 'outline'" @click="switchRegulatorView('dashboard')">区域监测</t-button>
                     <t-button :variant="currentView === 'farmers' ? 'base' : 'outline'" @click="switchRegulatorView('farmers')">养殖主体</t-button>
-                    <t-button :variant="currentView === 'approval' ? 'base' : 'outline'" @click="switchRegulatorView('approval')">许可审批</t-button>
+                    <t-button v-if="false" :variant="currentView === 'approval' ? 'base' : 'outline'" @click="switchRegulatorView('approval')">许可审批</t-button>
                     <t-button :variant="currentView === 'bindApproval' ? 'base' : 'outline'" @click="switchRegulatorView('bindApproval')">绑定审批</t-button>
                     <t-button :variant="currentView === 'waterData' ? 'base' : 'outline'" @click="switchRegulatorView('waterData')">水数据</t-button>
                     <t-button :variant="currentView === 'chain' ? 'base' : 'outline'" @click="switchRegulatorView('chain')">链上监管</t-button>
@@ -561,7 +561,7 @@
                   />
                 </template>
 
-                <template v-else-if="currentView === 'approval'">
+                <div v-else-if="currentView === 'approval'" style="display: none;">
                   <div class="panel-tip">集中处理养殖户排污许可证申请，并可直接执行通过上链、驳回与链上比对。</div>
                   <t-table
                     row-key="id"
@@ -571,7 +571,7 @@
                     max-height="520"
                     :empty="'暂无审批数据'"
                   />
-                </template>
+                </div>
 
                 <template v-else-if="currentView === 'waterData'">
                   <div class="warning-center-grid regulator-warning-grid">
@@ -808,19 +808,46 @@
     <!-- 养殖户绑定监管局对话框 -->
     <t-dialog
       :visible.sync="bindDialogVisible"
-      header="绑定监管局"
+      :header="bindDialogTitle"
       width="500px"
-      :confirm-btn="{ content: '申请绑定', theme: 'primary', loading: bindSubmitting }"
-      @confirm="handleApplyBind"
-      @cancel="bindDialogVisible = false"
+      :confirm-btn="{ content: bindDialogConfirmText, theme: 'primary', loading: bindSubmitting }"
+      @confirm="handleBindOrReplaceSubmit"
+      @cancel="resetBindDialog"
     >
-      <div class="bind-dialog-tip">选择要绑定的监管局，提交申请后等待监管局审批通过。</div>
+      <div class="bind-dialog-tip">{{ bindDialogTip }}</div>
       <t-form layout="vertical">
-        <t-form-item label="选择监管局" required>
+        <t-form-item label="许可证图片" required>
+          <div v-if="existingPermitImage && !applyForm.permitImage.length" class="existing-permit-preview">
+            <span class="existing-permit-label">当前许可证：</span>
+            <t-image :src="existingPermitImage" fit="cover" style="width: 120px; height: 120px; border-radius: 8px; margin-top: 8px;" />
+            <t-button size="small" theme="primary" variant="outline" style="margin-top: 8px;" @click="clearExistingPermit">更换许可证</t-button>
+          </div>
+          <t-upload
+            v-else
+            :action="uploadCommonFileUrl"
+            v-model="myFileList"
+            :onSuccess="uploadSuccess"
+            theme="image"
+            accept="image/*"
+            :multiple="false"
+            :auto-upload="true"
+            @change="handleFileChange"
+          >
+            <template #default>
+              <t-button theme="primary">点击上传</t-button>
+            </template>
+            <template #fileList>
+              <div v-if="applyForm.permitImage && applyForm.permitImage.length" class="upload-preview">
+                <t-image :src="applyForm.imgUrl" fit="cover" style="width: 100px; height: 100px; border-radius: 8px;" />
+              </div>
+            </template>
+          </t-upload>
+        </t-form-item>
+        <t-form-item v-if="!isAlreadyBound" label="选择监管局" required>
           <t-select v-model="selectedManagerId" :options="managerOptions" placeholder="请选择监管局" />
         </t-form-item>
       </t-form>
-      <div v-if="bindStatus && bindStatus.status !== undefined" class="bind-current-status">
+      <div v-if="bindStatus && bindStatus.status !== undefined && !isAlreadyBound" class="bind-current-status">
         <span>当前状态：</span>
         <t-tag :theme="bindStatusTheme" variant="light-outline">{{ bindStatusText }}</t-tag>
       </div>
@@ -983,6 +1010,8 @@ export default {
       bindStatus: null,
       managerList: [],
       selectedManagerId: '',
+      existingPermitImage: '',
+      isAlreadyBound: false,
       // 新增养殖池相关
       pondAddDialogVisible: false,
       pondAddSubmitting: false,
@@ -1011,9 +1040,30 @@ export default {
       bindApprovalList: [],
       bindApprovalColumns: [
         { colKey: 'id', title: '申请ID', width: 80 },
-        { colKey: 'farmerName', title: '养殖户', minWidth: 140 },
-        { colKey: 'farmerAccount', title: '养殖户账号', minWidth: 130 },
-        { colKey: 'applyTime', title: '申请时间', width: 160 },
+        { colKey: 'farmerName', title: '养殖户', minWidth: 120 },
+        { colKey: 'farmerAccount', title: '养殖户账号', minWidth: 120 },
+        {
+          colKey: 'permitImageUrl',
+          title: '许可证',
+          width: 100,
+          cell: (h, { row }) => {
+            if (!row.permitImageUrl) {
+              return h('span', { style: { color: '#6a7f95' } }, '未上传');
+            }
+            const imageUrl = row.permitImageUrl.startsWith('http') ? row.permitImageUrl : `${this.$API_BASE_URL}${row.permitImageUrl}`;
+            return h('t-image', {
+              props: {
+                src: imageUrl,
+                fit: 'cover',
+                style: 'width: 60px; height: 60px; border-radius: 4px; cursor: pointer;',
+              },
+              on: {
+                click: () => this.showPermitPreview(imageUrl),
+              },
+            });
+          },
+        },
+        { colKey: 'applyTime', title: '申请时间', width: 150 },
         {
           colKey: 'status',
           title: '状态',
@@ -1031,7 +1081,7 @@ export default {
         {
           colKey: 'operation',
           title: '操作',
-          width: 180,
+          width: 150,
           cell: (h, { row }) => {
             if (row.status !== 0) {
               return h('span', { style: { color: '#6a7f95' } }, '--');
@@ -1442,6 +1492,24 @@ export default {
       if (status === 1) return 'success';
       if (status === 2) return 'danger';
       return 'default';
+    },
+    isBound() {
+      return this.bindStatus && this.bindStatus.status === 1;
+    },
+    bindButtonText() {
+      return this.isBound ? '已绑定 · 更换许可证' : '绑定监管局';
+    },
+    bindDialogTitle() {
+      return this.isBound ? '更换许可证' : '绑定监管局';
+    },
+    bindDialogTip() {
+      if (this.isBound) {
+        return '上传新的许可证图片以替换当前许可证。';
+      }
+      return '请先上传许可证图片，然后选择要绑定的监管局，提交申请后等待监管局审批通过。';
+    },
+    bindDialogConfirmText() {
+      return this.isBound ? '确认更换' : '申请绑定';
     },
     managerOptions() {
       return this.managerList.map((item) => ({
@@ -2672,9 +2740,89 @@ export default {
         console.error('reject failed', error);
       }
     },
-    showBindDialog() {
+    async showBindDialog() {
+      await this.fetchBindStatus();
+      await this.fetchPermissionList();
+      const validPermit = this.enterpriseTableData.find((item) => item.status === 1);
+      if (validPermit) {
+        this.existingPermitImage = validPermit.permitImage;
+      } else {
+        this.existingPermitImage = '';
+      }
+      this.isAlreadyBound = this.bindStatus && this.bindStatus.status === 1;
       this.bindDialogVisible = true;
-      this.fetchManagerList();
+      if (!this.isAlreadyBound) {
+        this.fetchManagerList();
+      }
+    },
+    clearExistingPermit() {
+      this.existingPermitImage = '';
+    },
+    resetBindDialog() {
+      this.bindDialogVisible = false;
+      this.applyForm = {
+        imgUrl: '',
+        permitImage: [],
+      };
+      this.myFileList = [];
+      this.selectedManagerId = '';
+    },
+    async handleBindOrReplaceSubmit() {
+      if (!this.isAlreadyBound && !this.selectedManagerId) {
+        this.$message.warning('请选择要绑定的监管局');
+        return;
+      }
+      const hasNewPermit = this.applyForm.permitImage && this.applyForm.permitImage.length > 0;
+      const hasExistingPermit = !!this.existingPermitImage;
+      if (!hasNewPermit && !hasExistingPermit) {
+        this.$message.warning('请上传许可证图片');
+        return;
+      }
+      this.bindSubmitting = true;
+      try {
+        if (hasNewPermit) {
+          if (hasExistingPermit) {
+            const oldPermit = this.enterpriseTableData.find((item) => item.status === 1);
+            if (oldPermit) {
+              await this.deletePermit(oldPermit.id);
+            }
+          }
+          const response = await commitPermission({ imageUrl: this.applyForm.permitImage[0] });
+          if (response.code !== 0) {
+            this.$message.error(response.message || '许可证上传失败');
+            return;
+          }
+        }
+        if (!this.isAlreadyBound) {
+          const res = await applyBind({ managerId: this.selectedManagerId });
+          if (res.code === 0) {
+            this.$message.success('申请已提交，请等待监管局审批');
+            this.bindDialogVisible = false;
+            this.selectedManagerId = '';
+            await this.fetchBindStatus();
+          } else {
+            this.$message.error(res.message || '申请失败');
+          }
+        } else {
+          this.$message.success('许可证更换成功');
+          this.bindDialogVisible = false;
+          await this.fetchPermissionList();
+        }
+      } catch (error) {
+        console.error('操作失败:', error);
+        this.$message.error('操作失败');
+      } finally {
+        this.bindSubmitting = false;
+      }
+    },
+    async deletePermit(certId) {
+      try {
+        const res = await this.$axios.delete(`/gk_api/water/permission/delete?certId=${certId}`);
+        return res.data;
+      } catch (error) {
+        console.error('删除许可证失败:', error);
+        throw error;
+      }
     },
     async fetchManagerList() {
       try {
@@ -2782,6 +2930,10 @@ export default {
         console.error('拒绝绑定失败:', error);
         this.$message.error('操作失败');
       }
+    },
+    showPermitPreview(imageUrl) {
+      this.currentCompareImage = imageUrl;
+      this.compareDialogVisible = true;
     },
     async handleCompare(row) {
       if (Number(row?.status) !== 1) {
@@ -4017,6 +4169,18 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 14px;
+  color: #4f6780;
+}
+
+.existing-permit-preview {
+  padding: 12px;
+  border-radius: 8px;
+  background: #f0f7ff;
+  border: 1px solid #d4e8ff;
+}
+
+.existing-permit-label {
   font-size: 14px;
   color: #4f6780;
 }

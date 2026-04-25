@@ -9,10 +9,12 @@ import com.water.platform.base.common.ResultUtils;
 import com.water.platform.base.exception.ThrowUtils;
 import com.water.platform.mapper.ManagerFarmerMapper;
 import com.water.platform.mapper.UserMapper;
+import com.water.platform.mapper.CompanyCertMapper;
 import com.water.platform.model.dto.req.BindApplyReq;
 import com.water.platform.model.dto.resp.BindStatusResp;
 import com.water.platform.model.entity.ManagerFarmer;
 import com.water.platform.model.entity.User;
+import com.water.platform.model.entity.CompanyCert;
 import com.water.platform.utils.TokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,9 @@ public class ManagerFarmerService {
 
     @Autowired
     private ChainStoreService chainStoreService;
+
+    @Autowired
+    private CompanyCertMapper companyCertMapper;
 
     /**
      * 获取所有已注册监管局列表
@@ -117,6 +122,14 @@ public class ManagerFarmerService {
             User manager = userMapper.selectById(mf.getManagerId());
             if (manager != null) {
                 resp.setManagerName(manager.getUserName());
+            }
+            CompanyCert cert = companyCertMapper.selectOne(new LambdaQueryWrapper<CompanyCert>()
+                    .eq(CompanyCert::getUserId, mf.getFarmerId())
+                    .orderByDesc(CompanyCert::getId)
+                    .last("LIMIT 1"));
+            if (cert != null) {
+                resp.setPermitImageUrl(cert.getImageUrl());
+                resp.setPermitStatus(cert.getStatus());
             }
             return resp;
         }).collect(java.util.stream.Collectors.toList());

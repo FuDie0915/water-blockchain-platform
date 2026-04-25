@@ -35,4 +35,10 @@ public class BindingResp {
 
     @ApiModelProperty(value = "更新时间")
     private Date updateTime;
+
+    @ApiModelProperty(value = "许可证图片URL")
+    private String permitImageUrl;
+
+    @ApiModelProperty(value = "许可证状态（0=待审批, 1=有效, 2=已拒绝）")
+    private Integer permitStatus;
 }

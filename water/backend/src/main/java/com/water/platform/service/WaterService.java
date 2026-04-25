@@ -104,11 +104,9 @@ public class WaterService {
         Long userId = TokenUtil.getLoginUserId();
         boolean exists = companyCertMapper.exists(new LambdaQueryWrapper<CompanyCert>()
                 .eq(CompanyCert::getUserId, userId)
-                .and(companyCertLambdaQueryWrapper -> {
-                    companyCertLambdaQueryWrapper.eq(CompanyCert::getStatus, 0).or().eq(CompanyCert::getStatus, 1);
-                }));
-        ThrowUtils.throwIf(exists, ErrorCode.OPERATION_ERROR);
-        CompanyCert companyCert = new CompanyCert(null, userId, permissionCommitReq.getImageUrl(), 0, DateUtil.date(), null);
+                .eq(CompanyCert::getStatus, 1));
+        ThrowUtils.throwIf(exists, ErrorCode.OPERATION_ERROR, "您已有有效许可证，如需更换请先删除旧许可证");
+        CompanyCert companyCert = new CompanyCert(null, userId, permissionCommitReq.getImageUrl(), 1, DateUtil.date(), null);
         companyCertMapper.insert(companyCert);
         return ResultUtils.success(Boolean.TRUE);
     }
